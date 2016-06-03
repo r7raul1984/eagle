@@ -15,7 +15,7 @@ object TestSparkStreamingWithAlertDSLUseHBase extends App {
   val streamExecutorId = "hbaseAuditLogExecutor"
   env.config.set("dataSourceConfig.deserializerClass", classOf[HbaseAuditLogKafkaDeserializer].getCanonicalName)
   env.fromKafka().parallelism(1).nameAs(streamName).!(Seq(streamName), streamExecutorId)
-    .flatMap(new HbaseResourceSensitivityDataJoinExecutor())
+    //.flatMap(new HbaseResourceSensitivityDataJoinExecutor())
   env.execute()
 
 }
