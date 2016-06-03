@@ -41,5 +41,10 @@
             <artifactId>eagle-stream-application-manager</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.eagle</groupId>
+            <artifactId>eagle-stream-process-spark</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 </project>
