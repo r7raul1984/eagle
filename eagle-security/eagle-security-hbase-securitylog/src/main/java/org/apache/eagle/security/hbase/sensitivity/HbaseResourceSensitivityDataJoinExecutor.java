@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-public class HbaseResourceSensitivityDataJoinExecutor extends JavaStormStreamExecutor2<String, Map> {
+public class HbaseResourceSensitivityDataJoinExecutor extends JavaStormStreamExecutor2<String, Map<String, Object>> {
     private final static Logger LOG = LoggerFactory.getLogger(
             HbaseResourceSensitivityDataJoinExecutor.class);
     private Config config;
@@ -56,7 +56,7 @@ public class HbaseResourceSensitivityDataJoinExecutor extends JavaStormStreamExe
     }
 
     @Override
-    public void flatMap(List<Object> input, Collector<Tuple2<String, Map>> outputCollector){
+    public void flatMap(List<Object> input, Collector<Tuple2<String, Map<String, Object>>> outputCollector){
         @SuppressWarnings("unchecked")
         Map<String, Object> event = (Map<String, Object>)input.get(0);
         @SuppressWarnings("unchecked")
