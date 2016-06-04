@@ -22,7 +22,7 @@
     <parent>
         <artifactId>eagle-data-process-parent</artifactId>
         <groupId>org.apache.eagle</groupId>
-        <version>0.3.0-incubating</version>
+        <version>0.5.0-incubating-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -31,7 +31,7 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-core_2.10</artifactId>
+            <artifactId>spark-core_${scala.version}</artifactId>
             <version>1.6.0</version>
             <exclusions>
                 <exclusion>
@@ -42,12 +42,12 @@
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-streaming_2.10</artifactId>
+            <artifactId>spark-streaming_${scala.version}</artifactId>
             <version>1.6.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-streaming-kafka_2.10</artifactId>
+            <artifactId>spark-streaming-kafka_${scala.version}</artifactId>
             <version>1.6.1</version>
         </dependency>
         <dependency>
@@ -56,4 +56,12 @@
             <version>${project.version}</version>
         </dependency>
     </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
 </project>
