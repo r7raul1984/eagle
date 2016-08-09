@@ -16,60 +16,107 @@
  */
 package org.apache.eagle.alert.engine.runner;
 
+import com.google.common.base.Preconditions;
 import com.typesafe.config.Config;
+import kafka.common.TopicAndPartition;
+import kafka.message.MessageAndMetadata;
 import kafka.serializer.StringDecoder;
 import org.apache.eagle.alert.engine.coordinator.IMetadataChangeNotifyService;
 import org.apache.eagle.alert.engine.spark.function.*;
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.Durations;
+import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
+import org.apache.spark.streaming.kafka.HasOffsetRanges;
+import org.apache.spark.streaming.kafka.KafkaCluster;
 import org.apache.spark.streaming.kafka.KafkaUtils;
+import org.apache.spark.streaming.kafka.OffsetRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import scala.Predef;
+import scala.Tuple2;
+import scala.collection.JavaConversions;
 
+import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class UnitSparkTopologyRunner {
+public class UnitSparkTopologyRunner implements Serializable {
 
     private static final Logger LOG = LoggerFactory.getLogger(UnitSparkTopologyRunner.class);
+    //kafka config
+    private KafkaCluster kafkaCluster = null;
+    private Map<String, String> kafkaParams = new HashMap<String, String>();
+    private final static String CONSUMER_KAFKA_TOPIC = "topology.topics";
+    private Set<String> topics = new HashSet<String>();
+    private java.util.Map<kafka.common.TopicAndPartition, Long> fromOffsets = new java.util.HashMap<kafka.common.TopicAndPartition, Long>();
+    private final AtomicReference<OffsetRange[]> offsetRanges = new AtomicReference<OffsetRange[]>();
 
-    public final static String WINDOW_SECOND = "topology.window";
-    public final static int DEFAULT_WINDOW_SECOND = 2;
-    public final static String SPARK_EXECUTOR_CORES = "topology.core";
-    public final static String SPARK_EXECUTOR_MEMORY = "topology.memory";
-    public final static String alertBoltNamePrefix = "alertBolt";
-    public final static String alertPublishBoltName = "alertPublishBolt";
-    public final static String SPARK_EXECUTOR_INSTANCES = "topology.spark.executor.num"; //no need to set if you open spark.dynamicAllocation.enabled  see https://spark.apache.org/docs/latest/job-scheduling.html#dynamic-resource-allocation
-    public final static String LOCAL_MODE = "topology.localMode";
-    public final static String ROUTER_TASK_NUM = "topology.numOfRouterBolts";
-    public final static String ALERT_TASK_NUM = "topology.numOfAlertBolts";
-    public final static String PUBLISH_TASK_NUM = "topology.numOfPublishTasks";
-    public final static String CONSUMER_KAFKA_TOPIC = "topology.topics";
-    public final static String WINDOW_DURATIONS = "topology.windowDurations";
-    public final static String CHECKPOINT_DIRECTORY = "topology.checkpointDirectory";
-    public final static String TOPOLOGY_MASTER = "topology.master";
+    //spark config
+    private final static String WINDOW_SECOND = "topology.window";
+    private final static int DEFAULT_WINDOW_SECOND = 2;
+    private final static String SPARK_EXECUTOR_CORES = "topology.core";
+    private final static String SPARK_EXECUTOR_MEMORY = "topology.memory";
+    private final static String alertBoltNamePrefix = "alertBolt";
+    private final static String alertPublishBoltName = "alertPublishBolt";
+    private final static String SPARK_EXECUTOR_INSTANCES = "topology.spark.executor.num"; //no need to set if you open spark.dynamicAllocation.enabled  see https://spark.apache.org/docs/latest/job-scheduling.html#dynamic-resource-allocation
+    private final static String LOCAL_MODE = "topology.localMode";
+    private final static String ROUTER_TASK_NUM = "topology.numOfRouterBolts";
+    private final static String ALERT_TASK_NUM = "topology.numOfAlertBolts";
+    private final static String PUBLISH_TASK_NUM = "topology.numOfPublishTasks";
+
+    private final static String WINDOW_DURATIONS = "topology.windowDurations";
+    private final static String CHECKPOINT_DIRECTORY = "topology.checkpointDirectory";
+    private final static String TOPOLOGY_MASTER = "topology.master";
 
 
     //  private final IMetadataChangeNotifyService metadataChangeNotifyService;
-    private final Object lock = new Object();
     private String topologyId;
+    private String groupId;
+    private SparkConf sparkConf;
     private final Config config;
-    private JavaStreamingContext jssc;
+    private long window;
+
 
     public UnitSparkTopologyRunner(IMetadataChangeNotifyService metadataChangeNotifyService, Config config) throws InterruptedException {
 
-        this.topologyId = config.getString("topology.name");
-        this.config = config;
+        String inputBroker = config.getString("spout.kafkaBrokerZkQuorum");
+        kafkaParams.put("metadata.broker.list", inputBroker);
+        this.groupId = "eagle";
+        kafkaParams.put("group.id", this.groupId);
+        kafkaParams.put("auto.offset.reset", "largest");
+        // Newer version of metadata.broker.list:
+        kafkaParams.put("bootstrap.servers", inputBroker);
 
-        long window = config.hasPath(WINDOW_SECOND) ? config.getLong(WINDOW_SECOND) : DEFAULT_WINDOW_SECOND;
+        scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
+                .mapAsScalaMap(kafkaParams);
+        scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
+                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
+                    public Tuple2<String, String> apply(
+                            Tuple2<String, String> v1) {
+                        return v1;
+                    }
+                });
+        this.kafkaCluster = new KafkaCluster(immutableKafkaParam);
+        String topic = config.getString(CONSUMER_KAFKA_TOPIC);
+        this.topics.add("oozie");
+
+
+        this.config = config;
+        this.topologyId = config.getString("topology.name");
+
+        this.window = config.hasPath(WINDOW_SECOND) ? config.getLong(WINDOW_SECOND) : DEFAULT_WINDOW_SECOND;
         SparkConf sparkConf = new SparkConf();
         sparkConf.setAppName(topologyId);
         boolean localMode = config.getBoolean(LOCAL_MODE);
         if (localMode) {
             LOG.info("Submitting as local mode");
             sparkConf.setMaster("local[*]");
-        }else{
+        } else {
             sparkConf.setMaster(config.getString(TOPOLOGY_MASTER));
         }
         String sparkExecutorCores = config.getString(SPARK_EXECUTOR_CORES);
@@ -78,7 +125,7 @@ public class UnitSparkTopologyRunner {
         sparkConf.set("spark.executor.cores", sparkExecutorCores);
         sparkConf.set("spark.executor.memory", sparkExecutorMemory);
 
-        this.jssc = new JavaStreamingContext(sparkConf, Durations.seconds(window));
+        this.sparkConf = sparkConf;
         // this.jssc.checkpoint(checkpointDir);
         /*this.metadataChangeNotifyService = metadataChangeNotifyService;
         this.metadataChangeNotifyService.registerListener(this);
@@ -87,22 +134,16 @@ public class UnitSparkTopologyRunner {
     }
 
     public void run() throws InterruptedException {
+        JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(window));
         buildTopology(jssc, config);
         jssc.start();
         jssc.awaitTermination();
     }
 
-
     private void buildTopology(JavaStreamingContext jssc, Config config) {
 
-        String zkQuorum = config.getString("spout.kafkaBrokerZkQuorum");
-        Map<String, String> kafkaParams = new HashMap<>();
-        kafkaParams.put("metadata.broker.list", zkQuorum);
-        kafkaParams.put("auto.offset.reset", "smallest");//smallest|largest 重头消费|最新消费
 
-
-        String topic = config.getString(CONSUMER_KAFKA_TOPIC);
-        Set<String> topics = new HashSet<String>(Arrays.asList(topic));
+        fillInLatestOffsets();
 
         int windowDurations = config.getInt(WINDOW_DURATIONS);
         int numOfRouter = config.getInt(ROUTER_TASK_NUM);
@@ -110,15 +151,58 @@ public class UnitSparkTopologyRunner {
         int numOfPublishTasks = config.getInt(PUBLISH_TASK_NUM);
 
 
-        JavaPairDStream<String, String> messages = KafkaUtils.createDirectStream(jssc, String.class, String.class, StringDecoder.class, StringDecoder.class, kafkaParams, topics);
-
-        messages.window(Durations.seconds(windowDurations), Durations.seconds(windowDurations))
-                .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter,config))
+        @SuppressWarnings("unchecked")
+        Class<MessageAndMetadata<String, String>> streamClass =
+                (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
+        JavaInputDStream<MessageAndMetadata<String, String>> messages = KafkaUtils.createDirectStream(jssc,
+                String.class, String.class, StringDecoder.class,
+                StringDecoder.class, streamClass, kafkaParams,
+                this.fromOffsets, message -> message);
+        JavaPairDStream<String, String> pairDStream = messages.transform(new Function<JavaRDD<MessageAndMetadata<String, String>>, JavaRDD<MessageAndMetadata<String, String>>>() {
+            @Override
+            public JavaRDD<MessageAndMetadata<String, String>> call(JavaRDD<MessageAndMetadata<String, String>> rdd) throws Exception {
+                OffsetRange[] offsets = ((HasOffsetRanges) rdd.rdd()).offsetRanges();
+                offsetRanges.set(offsets);
+                return rdd;
+            }
+        }).mapToPair(km -> new Tuple2<>(km.topic(), km.message()));
+        pairDStream.window(Durations.seconds(windowDurations), Durations.seconds(windowDurations))
+                .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter, config))
                 .transformToPair(new ChangePartitionTo(numOfRouter))
                 .mapPartitionsToPair(new StreamRouteBoltFunction(config, "streamBolt"))
                 .transformToPair(new ChangePartitionTo(numOfAlertBolts))
                 .mapPartitionsToPair(new AlertBoltFunction(alertBoltNamePrefix, config, numOfAlertBolts))
-                .repartition(numOfPublishTasks).foreachRDD(new Publisher(config, alertPublishBoltName));
+                .repartition(numOfPublishTasks).foreachRDD(new Publisher(config, alertPublishBoltName, kafkaCluster, groupId, offsetRanges));
+    }
+
+    private void fillInLatestOffsets() {
+        scala.collection.mutable.Set<String> mutableTopics = JavaConversions
+                .asScalaSet(this.topics);
+        scala.collection.immutable.Set<String> immutableTopics = mutableTopics
+                .toSet();
+        scala.collection.immutable.Set<TopicAndPartition> scalaTopicAndPartitionSet = kafkaCluster
+                .getPartitions(immutableTopics).right().get();
+        if (kafkaCluster.getConsumerOffsets(groupId,
+                scalaTopicAndPartitionSet).isLeft()) {
+            Set<TopicAndPartition> javaTopicAndPartitionSet = JavaConversions
+                    .setAsJavaSet(scalaTopicAndPartitionSet);
+            for (TopicAndPartition topicAndPartition : javaTopicAndPartitionSet) {
+                this.fromOffsets.put(topicAndPartition, 0L);
+            }
+        } else {
+            scala.collection.immutable.Map<TopicAndPartition, Object> consumerOffsetsTemp = kafkaCluster
+                    .getConsumerOffsets(groupId,
+                            scalaTopicAndPartitionSet).right().get();
+
+            Map<TopicAndPartition, Object> consumerOffsets = JavaConversions
+                    .mapAsJavaMap(consumerOffsetsTemp);
+            Set<TopicAndPartition> javaTopicAndPartitionSet = JavaConversions
+                    .setAsJavaSet(scalaTopicAndPartitionSet);
+            for (TopicAndPartition topicAndPartition : javaTopicAndPartitionSet) {
+                Long offset = (Long) consumerOffsets.get(topicAndPartition);
+                this.fromOffsets.put(topicAndPartition, offset);
+            }
+        }
     }
 
 }

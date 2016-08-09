@@ -21,7 +21,7 @@ public class SpecMetadataResource {
 
     public static final String SPARK = "/spark";
 
-    @Path("/spoutSpec")
+    @Path("/spoutspec")
     @GET
     public SpoutSpec getSpoutSpec() {
         return MetadataSerDeser.deserialize(getClass().getResourceAsStream(SPARK + "/spoutSpec.json"), SpoutSpec.class);
