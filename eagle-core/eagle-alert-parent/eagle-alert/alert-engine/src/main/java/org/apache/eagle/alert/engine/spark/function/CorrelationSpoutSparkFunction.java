@@ -18,7 +18,6 @@ package org.apache.eagle.alert.engine.spark.function;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.typesafe.config.Config;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.eagle.alert.coordination.model.*;
@@ -26,41 +25,36 @@ import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamPartition;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
-import org.apache.eagle.alert.engine.serialization.SerializationMetadataProvider;
-import org.apache.eagle.alert.engine.spark.broadcast.SpoutSpecData;
-import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
-import org.apache.spark.streaming.api.java.JavaStreamingContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2<String, String>, Integer, PartitionedEvent>, SerializationMetadataProvider {
+public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2<String, String>, Integer, PartitionedEvent> {
 
     private static final long serialVersionUID = -5281723341236671580L;
     private static final Logger LOG = LoggerFactory.getLogger(CorrelationSpoutSparkFunction.class);
 
     private int numOfRouterBolts;
-  //  private String topic = "";
-    private SpoutSpec spoutSpec;
-    private Map<String, StreamDefinition> sds;
-    private Config config;
+    private AtomicReference<SpoutSpec>  spoutSpecRef;
+    private AtomicReference<Map<String, StreamDefinition>> sdsRef;
 
 
-    public CorrelationSpoutSparkFunction(int numOfRouter, Config config) {
+    public CorrelationSpoutSparkFunction(int numOfRouter,AtomicReference<SpoutSpec> spoutSpecRef, AtomicReference<Map<String, StreamDefinition>> sdsRef) {
         this.numOfRouterBolts = numOfRouter;
-        this.config = config;
+        this.spoutSpecRef = spoutSpecRef;
+        this.sdsRef = sdsRef;
     }
 
     @Override
     public Iterator<Tuple2<Integer, PartitionedEvent>> call(Tuple2<String, String> message) {
 
-        SpecMetadataServiceClientImpl client = new SpecMetadataServiceClientImpl(config);
-        sds = client.getSds();
-        spoutSpec = client.getSpoutSpec();
+        Map<String, StreamDefinition> sds = sdsRef.get();
+        SpoutSpec spoutSpec = spoutSpecRef.get();
 
         ObjectMapper mapper = new ObjectMapper();
         TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {
@@ -76,10 +70,6 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         String topic = message._1;
         tuple.add(0, topic);
         tuple.add(1, value);
-         /*Object topic = tupleContent.get(0);
-        Object streamName = tupleContent.get(1);
-        Object timestamp = tupleContent.get(2);
-        Object value = tupleContent.get(3);*/
         Tuple2StreamMetadata metadata = spoutSpec.getTuple2StreamMetadataMap().get(topic);
         if (metadata == null) {
             LOG.error(
@@ -132,10 +122,10 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
     }
 
 
-    @Override
+   /* @Override
     public StreamDefinition getStreamDefinition(String streamId) {
         return sds.get(streamId);
-    }
+    }*/
 
 
     @SuppressWarnings("rawtypes")

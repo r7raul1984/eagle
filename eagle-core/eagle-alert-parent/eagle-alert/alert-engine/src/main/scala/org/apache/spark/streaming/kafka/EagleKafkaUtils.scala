@@ -68,6 +68,8 @@ object EagleKafkaUtils extends Logging {
     *                       host1:port1,host2:port2 form.
     * @param fromOffsets    Per-topic/partition Kafka offsets defining the (inclusive)
     *                       starting point of the stream
+    * @param topicAndPartitionHandler Chang Map[TopicAndPartition, Long] dynamically to
+    *                                 support add/remove topic without restart
     * @param messageHandler Function for translating each message and metadata into the desired type
     * @tparam K  type of Kafka message key
     * @tparam V  type of Kafka message value
@@ -85,11 +87,12 @@ object EagleKafkaUtils extends Logging {
                 ssc: StreamingContext,
                 kafkaParams: Map[String, String],
                 fromOffsets: Map[TopicAndPartition, Long],
+                topicAndPartitionHandler: Map[TopicAndPartition, Long] => Map[TopicAndPartition, Long],
                 messageHandler: MessageAndMetadata[K, V] => R
               ): InputDStream[R] = {
     val cleanedHandler = ssc.sc.clean(messageHandler)
     new DynamicTopicKafkaInputDStream[K, V, KD, VD, R](
-      ssc, kafkaParams, fromOffsets, cleanedHandler)
+      ssc, kafkaParams, fromOffsets,topicAndPartitionHandler, cleanedHandler)
   }
 
 
@@ -126,6 +129,8 @@ object EagleKafkaUtils extends Logging {
     *                          host1:port1,host2:port2 form.
     * @param fromOffsets       Per-topic/partition Kafka offsets defining the (inclusive)
     *                          starting point of the stream
+    * @param topicAndPartitionHandler Chang Map[TopicAndPartition, Long] dynamically to
+    *                                 support add/remove topic without restart
     * @param messageHandler    Function for translating each message and metadata into the desired type
     * @tparam K  type of Kafka message key
     * @tparam V  type of Kafka message value
@@ -143,6 +148,7 @@ object EagleKafkaUtils extends Logging {
                                                                        recordClass: Class[R],
                                                                        kafkaParams: JMap[String, String],
                                                                        fromOffsets: JMap[TopicAndPartition, JLong],
+                                                                       topicAndPartitionHandler: Map[TopicAndPartition, Long] => Map[TopicAndPartition, Long],
                                                                        messageHandler: JFunction[MessageAndMetadata[K, V], R]
                                                                      ): JavaInputDStream[R] = {
     implicit val keyCmt: ClassTag[K] = ClassTag(keyClass)
@@ -155,6 +161,7 @@ object EagleKafkaUtils extends Logging {
       jssc.ssc,
       Map(kafkaParams.asScala.toSeq: _*),
       Map(fromOffsets.asScala.mapValues(_.longValue()).toSeq: _*),
+      topicAndPartitionHandler,
       cleanedHandler
     )
   }
@@ -178,12 +185,12 @@ object EagleKafkaUtils extends Logging {
     if(topics.isEmpty){
       throw new IllegalArgumentException
     }
-
     val zkClient: ZkClient = new ZkClient(zkServers, ZK_TIMEOUT_MSEC, ZK_TIMEOUT_MSEC);
     try {
       val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
       logInfo("effectiveTopics" + effectiveTopics)
       val tp = kafkaCluster.getPartitions(effectiveTopics.toSet).right.get
+
       tp.foreach(
         eachTp => {
           val result = kafkaCluster.getConsumerOffsets(groupId, Set(eachTp))

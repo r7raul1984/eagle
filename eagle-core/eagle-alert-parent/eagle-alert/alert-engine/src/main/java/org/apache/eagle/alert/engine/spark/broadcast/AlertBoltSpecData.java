@@ -20,10 +20,6 @@ import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.broadcast.Broadcast;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Stream;
-
 public class AlertBoltSpecData {
     private static Broadcast<AlertBoltSpec> instance = null;
 

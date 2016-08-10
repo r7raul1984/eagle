@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
-import java.io.Serializable;
 import java.util.*;
 
 public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<Integer,PartitionedEvent>>, Integer, PartitionedEvent>, SerializationMetadataProvider {

@@ -10,10 +10,7 @@ import scala.Predef;
 import scala.Tuple2;
 import scala.collection.JavaConversions;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class EagleKafkaUtilsTest {
 
@@ -108,7 +105,7 @@ public class EagleKafkaUtilsTest {
         topics.add(topic2);
 
         Map<TopicAndPartition, Long> topicAndPartitionLongMap = new HashMap<TopicAndPartition, Long>();
-        topicAndPartitionLongMap.put(new TopicAndPartition("topic1", 0), 12L);
+        topicAndPartitionLongMap.put(new TopicAndPartition("topic1", 0), 0L);
 
         EagleKafkaUtils.fillInLatestOffsets(topics, topicAndPartitionLongMap, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
         Assert.assertEquals(2, topicAndPartitionLongMap.size());

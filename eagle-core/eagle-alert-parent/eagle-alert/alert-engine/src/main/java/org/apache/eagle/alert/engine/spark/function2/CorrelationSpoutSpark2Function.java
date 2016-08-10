@@ -28,6 +28,7 @@ import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.apache.eagle.alert.engine.serialization.SerializationMetadataProvider;
 import org.apache.eagle.alert.engine.spark.function.CorrelationSpoutSparkFunction;
+import org.apache.eagle.alert.engine.spark.function.CorrelationSpoutSparkFunction;
 import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.slf4j.Logger;

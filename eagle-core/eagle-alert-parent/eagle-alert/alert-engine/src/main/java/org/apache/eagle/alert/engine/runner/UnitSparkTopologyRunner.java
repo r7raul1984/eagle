@@ -25,11 +25,11 @@ import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.IMetadataChangeNotifyService;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.engine.spark.function.*;
 import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
-import org.apache.spark.function.*;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
@@ -89,7 +89,7 @@ public class UnitSparkTopologyRunner implements Serializable {
 
         String inputBroker = config.getString("spout.kafkaBrokerZkQuorum");
         kafkaParams.put("metadata.broker.list", inputBroker);
-        this.groupId = "eagle";
+        this.groupId = "eagle" + new Random(10).nextInt();
         kafkaParams.put("group.id", this.groupId);
         kafkaParams.put("auto.offset.reset", "largest");
         // Newer version of metadata.broker.list:
@@ -142,9 +142,9 @@ public class UnitSparkTopologyRunner implements Serializable {
     private void buildTopology(JavaStreamingContext jssc, Config config) {
 
         Set<String> topics = getInitTopics(config);
-        EagleKafkaUtils.fillInLatestOffsets(topics,this.fromOffsets,this.groupId,this.kafkaCluster,this.zkServers);
+        EagleKafkaUtils.fillInLatestOffsets(topics, this.fromOffsets, this.groupId, this.kafkaCluster, this.zkServers);
 
-       int windowDurations = config.getInt(WINDOW_DURATIONS);
+        int windowDurations = config.getInt(WINDOW_DURATIONS);
         int numOfRouter = config.getInt(ROUTER_TASK_NUM);
         int numOfAlertBolts = config.getInt(ALERT_TASK_NUM);
         int numOfPublishTasks = config.getInt(PUBLISH_TASK_NUM);
@@ -153,10 +153,12 @@ public class UnitSparkTopologyRunner implements Serializable {
         @SuppressWarnings("unchecked")
         Class<MessageAndMetadata<String, String>> streamClass =
                 (Class<MessageAndMetadata<String, String>>) (Class<?>) MessageAndMetadata.class;
+
+
         JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils.createDirectStream(jssc,
                 String.class, String.class, StringDecoder.class,
                 StringDecoder.class, streamClass, kafkaParams,
-                this.fromOffsets, message -> message);
+                this.fromOffsets,fromOffsets ->fromOffsets, message -> message);
         JavaPairDStream<String, String> pairDStream = messages.transform(new Function<JavaRDD<MessageAndMetadata<String, String>>, JavaRDD<MessageAndMetadata<String, String>>>() {
 
             SpecMetadataServiceClientImpl client = new SpecMetadataServiceClientImpl(config);

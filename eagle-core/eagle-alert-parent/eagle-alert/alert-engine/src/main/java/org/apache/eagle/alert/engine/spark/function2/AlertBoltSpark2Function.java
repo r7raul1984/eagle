@@ -29,7 +29,6 @@ import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.runner.MapComparator;
 import org.apache.eagle.alert.engine.serialization.SerializationMetadataProvider;
-import org.apache.eagle.alert.engine.spark.function.AlertBoltFunction;
 import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.api.java.function.MapPartitionsFunction;
 import org.slf4j.Logger;

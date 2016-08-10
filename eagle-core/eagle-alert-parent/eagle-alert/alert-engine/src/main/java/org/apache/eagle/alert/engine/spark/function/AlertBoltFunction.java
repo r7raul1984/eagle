@@ -27,54 +27,43 @@ import org.apache.eagle.alert.engine.evaluator.impl.PolicyGroupEvaluatorImpl;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.runner.MapComparator;
-import org.apache.eagle.alert.engine.serialization.SerializationMetadataProvider;
-import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
-import com.typesafe.config.Config;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<Integer, PartitionedEvent>>, String, AlertStreamEvent>, SerializationMetadataProvider {
+public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<Integer, PartitionedEvent>>, String, AlertStreamEvent> {
     private final static Logger LOG = LoggerFactory.getLogger(AlertBoltFunction.class);
 
     private String alertBoltNamePrefix;
-
-    private Map<String, StreamDefinition> sdf;
-    private AlertBoltSpec spec;
+    private AtomicReference<Map<String, StreamDefinition>> sdsRef;
+    private AtomicReference<AlertBoltSpec> alertBoltSpecRef;
     private int numOfAlertBolts;
-    private Config config;
 
-    public AlertBoltFunction(String alertBoltNamePrefix, AlertBoltSpec spec, Map<String, StreamDefinition> sds, int numOfAlertBolts) {
+    public AlertBoltFunction(String alertBoltNamePrefix, AtomicReference<Map<String, StreamDefinition>> sdsRef, AtomicReference<AlertBoltSpec> alertBoltSpecRef, int numOfAlertBolts) {
         this.alertBoltNamePrefix = alertBoltNamePrefix;
-        this.sdf = sds;
-        this.spec = spec;
+        this.sdsRef = sdsRef;
+        this.alertBoltSpecRef = alertBoltSpecRef;
         this.numOfAlertBolts = numOfAlertBolts;
     }
 
-    public AlertBoltFunction(String alertBoltNamePrefix, Config config, int numOfAlertBolts) {
-        this.alertBoltNamePrefix = alertBoltNamePrefix;
-        this.numOfAlertBolts = numOfAlertBolts;
-        this.config = config;
-
-    }
 
     @Override
     public Iterator<Tuple2<String, AlertStreamEvent>> call(Iterator<Tuple2<Integer, PartitionedEvent>> tuple2Iterator) throws Exception {
-        SpecMetadataServiceClientImpl client = new SpecMetadataServiceClientImpl(config);
-        this.spec = client.getAlertBoltSpec();
-        this.sdf = client.getSds();
+        Map<String, StreamDefinition> sdf = sdsRef.get();
+        AlertBoltSpec alertBoltSpec = alertBoltSpecRef.get();
         AlertBoltOutputCollectorSparkWrapper alertOutputCollector = new AlertBoltOutputCollectorSparkWrapper();
         PolicyGroupEvaluatorImpl[] evaluators = new PolicyGroupEvaluatorImpl[numOfAlertBolts];
         for (int i = 0; i < numOfAlertBolts; i++) {
             evaluators[i] = new PolicyGroupEvaluatorImpl(alertBoltNamePrefix + i);
             evaluators[i].init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector);
-            onAlertBoltSpecChange(evaluators[i], spec, sdf);
+            onAlertBoltSpecChange(evaluators[i], alertBoltSpec, sdf);
         }
 
         while (tuple2Iterator.hasNext()) {
@@ -105,11 +94,6 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
         policyGroupEvaluator.onPolicyChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), sds);
 
 
-    }
-
-    @Override
-    public StreamDefinition getStreamDefinition(String streamId) {
-        return sdf.get(streamId);
     }
 
 
