@@ -175,6 +175,10 @@ object EagleKafkaUtils extends Logging {
 
   def fillInLatestOffsets(topics: JSet[String], fromOffsets: JMap[TopicAndPartition, JLong], groupId: String, kafkaCluster: KafkaCluster, zkServers: String) {
 
+    if(topics.isEmpty){
+      throw new IllegalArgumentException
+    }
+
     val zkClient: ZkClient = new ZkClient(zkServers, ZK_TIMEOUT_MSEC, ZK_TIMEOUT_MSEC);
     try {
       val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
