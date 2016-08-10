@@ -28,6 +28,7 @@ import kafka.message.MessageAndMetadata
 import kafka.serializer.Decoder
 import org.I0Itec.zkclient.ZkClient
 import org.apache.spark.api.java.function.{Function => JFunction}
+import org.apache.spark.internal.Logging
 import org.apache.spark.streaming.StreamingContext
 import org.apache.spark.streaming.api.java._
 import org.apache.spark.streaming.dstream.InputDStream
@@ -36,7 +37,7 @@ import scala.collection.JavaConverters._
 import scala.collection.immutable.{Map, Set}
 import scala.reflect.ClassTag
 
-object EagleKafkaUtils {
+object EagleKafkaUtils extends Logging {
   private val ZK_TIMEOUT_MSEC: Int = TimeUnit.MILLISECONDS.convert(30, TimeUnit.SECONDS).toInt
 
   /**
@@ -177,9 +178,21 @@ object EagleKafkaUtils {
     val zkClient: ZkClient = new ZkClient(zkServers, ZK_TIMEOUT_MSEC, ZK_TIMEOUT_MSEC);
     try {
       val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
+      logInfo("effectiveTopics" + effectiveTopics)
       val tp = kafkaCluster.getPartitions(effectiveTopics.toSet).right.get
-      val result = kafkaCluster.getConsumerOffsets(groupId, tp)
-      result.right.get.foreach(tpAndOffset => fromOffsets.put(tpAndOffset._1,tpAndOffset._2))
+      tp.foreach(
+        eachTp => {
+          val result = kafkaCluster.getConsumerOffsets(groupId, Set(eachTp))
+          if (result.isLeft) {
+            fromOffsets.put(eachTp, 0L)
+          } else {
+            result.right.get.foreach(tpAndOffset => {
+              fromOffsets.put(tpAndOffset._1, tpAndOffset._2)
+            })
+          }
+        }
+      )
+      logInfo("fillInLatestOffsets fromOffsets" + fromOffsets)
     } finally {
       zkClient.close;
     }
