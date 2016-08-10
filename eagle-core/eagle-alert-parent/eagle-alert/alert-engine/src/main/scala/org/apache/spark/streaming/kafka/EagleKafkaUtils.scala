@@ -178,15 +178,8 @@ object EagleKafkaUtils {
     try {
       val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
       val tp = kafkaCluster.getPartitions(effectiveTopics.toSet).right.get
-      tp.foreach(tp => {
-        val result = kafkaCluster.getConsumerOffsets(groupId, Set(tp))
-        if (kafkaCluster.getConsumerOffsets(groupId, Set(tp)).isLeft) {
-          fromOffsets.put(tp, 0L);
-        } else {
-          val consumerOffsets = kafkaCluster.getConsumerOffsets(groupId, Set(tp)).right.get
-          fromOffsets.put(tp, consumerOffsets.asInstanceOf[Long])
-        }
-      })
+      val result = kafkaCluster.getConsumerOffsets(groupId, tp)
+      result.right.get.foreach(tpAndOffset => fromOffsets.put(tpAndOffset._1,tpAndOffset._2))
     } finally {
       zkClient.close;
     }
