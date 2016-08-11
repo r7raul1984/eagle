@@ -61,19 +61,17 @@ public class RefreshTopicFunction implements Function<scala.collection.immutable
         });
 
 
-        EagleKafkaUtils.refreshOffsets(topicsRef.get(),
+        Map<TopicAndPartition, Object> newOffset= EagleKafkaUtils.refreshOffsets(topicsRef.get(),
                 oldOffsetWithTypeMap,
                 this.groupId,
                 this.kafkaCluster,
                 this.zkServers);
-
-
-        Map<TopicAndPartition, Object> newOffsetJavaMap = new HashMap<>(oldOffsetJavaMap.size());
-        oldOffsetWithTypeMap.forEach((topicAndPartition, offset) -> {
-            newOffsetJavaMap.put(topicAndPartition, offset);
-        });
+        if(newOffset == null){
+            LOG.info("first init app so remain the oldOffset");
+            return oldOffset;
+        }
         scala.collection.mutable.Map<TopicAndPartition, Object> mutableNewOffsetJavaMap = JavaConversions
-                .mapAsScalaMap(newOffsetJavaMap);
+                .mapAsScalaMap(newOffset);
         scala.collection.immutable.Map<TopicAndPartition, Object> immutableNewOffsetJavaMap = mutableNewOffsetJavaMap
                 .toMap(new Predef.$less$colon$less<Tuple2<TopicAndPartition, Object>, Tuple2<TopicAndPartition, Object>>() {
                     public Tuple2<TopicAndPartition, Object> apply(

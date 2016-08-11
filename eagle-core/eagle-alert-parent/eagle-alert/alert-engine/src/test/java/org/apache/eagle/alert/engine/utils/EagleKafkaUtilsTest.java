@@ -34,7 +34,7 @@ public class EagleKafkaUtilsTest {
     }
 
     @Test
-    public void testNewTopic() throws InterruptedException {
+    public void testNewTopic() {
 
         final String topic1 = "topic1";
         final String topic2 = "topic2";
@@ -66,7 +66,7 @@ public class EagleKafkaUtilsTest {
 
 
     @Test
-    public void testOldTopicWithOffsetAndNewTopic() throws InterruptedException {
+    public void testOldTopicWithOffsetAndNewTopic() {
 
         final String topic1 = "topic1";
         final String topic2 = "topic2";
@@ -104,17 +104,16 @@ public class EagleKafkaUtilsTest {
         topics.add(topic1);
         topics.add(topic2);
 
-        Map<TopicAndPartition, Long> topicAndPartitionLongMap = new HashMap<TopicAndPartition, Long>();
-        topicAndPartitionLongMap.put(new TopicAndPartition("topic1", 0), 0L);
+        Map<TopicAndPartition, Long> fromOffsets = new HashMap<TopicAndPartition, Long>();
 
-        EagleKafkaUtils.fillInLatestOffsets(topics, topicAndPartitionLongMap, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
-        Assert.assertEquals(2, topicAndPartitionLongMap.size());
-        Assert.assertEquals(new Long(12), topicAndPartitionLongMap.get(new TopicAndPartition("topic1", 0)));
-        Assert.assertEquals(new Long(0), topicAndPartitionLongMap.get(new TopicAndPartition("topic2", 0)));
+        EagleKafkaUtils.fillInLatestOffsets(topics, fromOffsets, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
+        Assert.assertEquals(2, fromOffsets.size());
+        Assert.assertEquals(new Long(12), fromOffsets.get(new TopicAndPartition("topic1", 0)));
+        Assert.assertEquals(new Long(0), fromOffsets.get(new TopicAndPartition("topic2", 0)));
     }
 
     @Test
-    public void testInputEmptyTopics() throws InterruptedException {
+    public void testInputEmptyTopics() {
 
         Map<String, String> kafkaParams = new HashMap<>();
         kafkaParams.put("metadata.broker.list", kafkaTestUtils.brokerAddress());
@@ -137,6 +136,122 @@ public class EagleKafkaUtilsTest {
         EagleKafkaUtils.fillInLatestOffsets(topics, fromOffsets, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
     }
 
+    @Test
+    public void testRefreshOffsetNoChangTopic(){
+
+        final String topic1 = "topic1";
+        final String topic2 = "topic2";
+        createTopic(topic1);
+        createTopic(topic2);
+
+        Map<String, String> kafkaParams = new HashMap<>();
+        kafkaParams.put("metadata.broker.list", kafkaTestUtils.brokerAddress());
+        kafkaParams.put("auto.offset.reset", "smallest");
+        kafkaParams.put("group.id", groupId);
+
+        scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
+                .mapAsScalaMap(kafkaParams);
+        scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
+                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
+                    public Tuple2<String, String> apply(
+                            Tuple2<String, String> v1) {
+                        return v1;
+                    }
+                });
+        final KafkaCluster kafkaCluster = new KafkaCluster(immutableKafkaParam);
+
+        Set<String> topics = new HashSet<String>();
+        topics.add(topic1);
+        topics.add(topic2);
+
+        Map<TopicAndPartition, Long> currentOffsets = new HashMap<TopicAndPartition, Long>();
+        currentOffsets.put(new TopicAndPartition("topic1",0),12L);
+        currentOffsets.put(new TopicAndPartition("topic2",0),2L);
+
+        Map<TopicAndPartition, Object> refreshOffsets = EagleKafkaUtils.refreshOffsets(topics, currentOffsets, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
+
+        Assert.assertEquals(2, currentOffsets.size());
+        Assert.assertEquals(12l, Long.parseLong(refreshOffsets.get(new TopicAndPartition("topic1", 0)).toString()));
+        Assert.assertEquals(2l, Long.parseLong(refreshOffsets.get(new TopicAndPartition("topic2", 0)).toString()));
+
+    }
+
+    @Test
+    public void testRefreshOffsetAddTopic(){
+
+        final String topic1 = "topic1";
+        final String topic2 = "topic2";// new topic
+        createTopic(topic1);
+        createTopic(topic2);
+
+        Map<String, String> kafkaParams = new HashMap<>();
+        kafkaParams.put("metadata.broker.list", kafkaTestUtils.brokerAddress());
+        kafkaParams.put("auto.offset.reset", "smallest");
+        kafkaParams.put("group.id", groupId);
+
+        scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
+                .mapAsScalaMap(kafkaParams);
+        scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
+                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
+                    public Tuple2<String, String> apply(
+                            Tuple2<String, String> v1) {
+                        return v1;
+                    }
+                });
+        final KafkaCluster kafkaCluster = new KafkaCluster(immutableKafkaParam);
+
+        Set<String> topics = new HashSet<String>();
+        topics.add(topic1);
+        topics.add(topic2);
+
+        Map<TopicAndPartition, Long> currentOffsets = new HashMap<TopicAndPartition, Long>();
+        currentOffsets.put(new TopicAndPartition("topic1",0),12L);
+
+        Map<TopicAndPartition, Object> refreshOffsets = EagleKafkaUtils.refreshOffsets(topics, currentOffsets, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
+
+        Assert.assertEquals(2, refreshOffsets.size());
+        Assert.assertEquals(12l, Long.parseLong(refreshOffsets.get(new TopicAndPartition("topic1", 0)).toString()));
+        Assert.assertEquals(0l, Long.parseLong(refreshOffsets.get(new TopicAndPartition("topic2", 0)).toString()));
+
+    }
+
+    @Test
+    public void testRefreshOffsetRemoveTopic(){
+
+        final String topic1 = "topic1";
+        final String topic2 = "topic2";
+        createTopic(topic1);
+        createTopic(topic2);
+
+        Map<String, String> kafkaParams = new HashMap<>();
+        kafkaParams.put("metadata.broker.list", kafkaTestUtils.brokerAddress());
+        kafkaParams.put("auto.offset.reset", "smallest");
+        kafkaParams.put("group.id", groupId);
+
+        scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
+                .mapAsScalaMap(kafkaParams);
+        scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
+                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
+                    public Tuple2<String, String> apply(
+                            Tuple2<String, String> v1) {
+                        return v1;
+                    }
+                });
+        final KafkaCluster kafkaCluster = new KafkaCluster(immutableKafkaParam);
+
+        Set<String> topics = new HashSet<String>();
+        topics.add(topic1);//remove topic2
+
+        Map<TopicAndPartition, Long> currentOffsets = new HashMap<TopicAndPartition, Long>();
+        currentOffsets.put(new TopicAndPartition("topic1",0),12L);
+        currentOffsets.put(new TopicAndPartition("topic2",0),2L);
+
+        Map<TopicAndPartition, Object> refreshOffsets = EagleKafkaUtils.refreshOffsets(topics, currentOffsets, groupId, kafkaCluster, kafkaTestUtils.zkAddress());
+
+        Assert.assertEquals(1, refreshOffsets.size());
+        Assert.assertEquals(12l, Long.parseLong(refreshOffsets.get(new TopicAndPartition("topic1", 0)).toString()));
+
+    }
 
     private String[] createTopic(String topic) {
         String[] data = {topic + "-1", topic + "-2", topic + "-3"};

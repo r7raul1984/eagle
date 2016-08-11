@@ -19,6 +19,7 @@
 package org.apache.spark.streaming.kafka
 
 import java.lang.{Integer => JInt, Long => JLong}
+import java.util
 import java.util.concurrent.TimeUnit
 import java.util.{List => JList, Map => JMap, Set => JSet}
 
@@ -212,33 +213,37 @@ object EagleKafkaUtils extends Logging {
     }
   }
 
-  def refreshOffsets(topics: JSet[String], currentOffsets: JMap[TopicAndPartition, JLong], groupId: String, kafkaCluster: KafkaCluster, zkServers: String): Unit = {
-    if(topics == null){//first init
-      return
+  def refreshOffsets(topics: JSet[String], currentOffsets: JMap[TopicAndPartition, JLong], groupId: String, kafkaCluster: KafkaCluster, zkServers: String): JMap[TopicAndPartition, Long] = {
+    if (topics == null) {
+      //first init
+      return null
     }
     val zkClient: ZkClient = new ZkClient(zkServers, ZK_TIMEOUT_MSEC, ZK_TIMEOUT_MSEC);
+    var currentOffsetsWithOutNouseTopic: Map[TopicAndPartition, Long] = Map()
     try {
       val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
       val tp = kafkaCluster.getPartitions(effectiveTopics.toSet).right.get
 
       currentOffsets.asScala.keys.foreach(
         currentTp => {
-          if (!tp.contains(currentTp)) {
-            currentOffsets.remove(currentTp) //remove nouse TopicAndPartition
+          //remove nouse TopicAndPartition
+          if (tp.contains(currentTp)) {
+            val offset = currentOffsets.get(currentTp)
+            currentOffsetsWithOutNouseTopic = currentOffsetsWithOutNouseTopic + (currentTp -> offset)
           }
         }
       )
 
       tp.foreach(
         eachTp => {
-          if (!currentOffsets.containsKey(tp)) {
+          if (!currentOffsetsWithOutNouseTopic.contains(eachTp)) {
             //add new TopicAndPartition
             val result = kafkaCluster.getConsumerOffsets(groupId, Set(eachTp))
             if (result.isLeft) {
-              currentOffsets.put(eachTp, 0L)
+              currentOffsetsWithOutNouseTopic = currentOffsetsWithOutNouseTopic + (eachTp -> 0L)
             } else {
               result.right.get.foreach(tpAndOffset => {
-                currentOffsets.put(tpAndOffset._1, tpAndOffset._2)
+                currentOffsetsWithOutNouseTopic = currentOffsetsWithOutNouseTopic + (tpAndOffset._1 -> tpAndOffset._2)
               })
             }
           }
@@ -248,5 +253,7 @@ object EagleKafkaUtils extends Logging {
     } finally {
       zkClient.close;
     }
+    currentOffsetsWithOutNouseTopic.asJava
   }
+
 }
