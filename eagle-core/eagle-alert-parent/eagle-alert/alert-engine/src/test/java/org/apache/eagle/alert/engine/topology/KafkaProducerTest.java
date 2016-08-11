@@ -61,7 +61,7 @@ public class KafkaProducerTest implements Serializable {
 
         KafkaEmbedded kafka = new KafkaEmbedded(9092, 2181);
 
-        makeSureTopic(topic);
+        makeSureTopic();
 
 
         long starttime = DateTimeUtil.humanDateToMilliseconds("2016-07-07 17:40:14,526");
@@ -83,8 +83,8 @@ public class KafkaProducerTest implements Serializable {
             try {
                 String msg = mapper.writeValueAsString(map1);
                 String msg2 = mapper.writeValueAsString(map2);
-                ProducerRecord<String, String> producerRecord = new ProducerRecord<String, String>(topic, "oozie1", msg);
-                ProducerRecord<String, String> producerRecord2 = new ProducerRecord<String, String>(topic, "oozie2", msg2);
+                ProducerRecord<String, String> producerRecord = new ProducerRecord<String, String>("oozie", "oozie1", msg);
+                ProducerRecord<String, String> producerRecord2 = new ProducerRecord<String, String>("testTopic3", "oozie2", msg2);
                 System.out.println(msg);
                 System.out.println(msg2);
                 producer.send(producerRecord);
@@ -115,13 +115,14 @@ public class KafkaProducerTest implements Serializable {
 
     }
 
-    public static void makeSureTopic(String topic) {
+    public static void makeSureTopic() {
         ZkClient zkClient = new ZkClient("localhost:2181", 10000, 10000, ZKStringSerializer$.MODULE$);
         Properties topicConfiguration = new Properties();
         ZkConnection zkConnection = new ZkConnection("localhost:2181");
       //  zkConnection.create()
 //        ZkUtils zkUtils = new ZkUtils(zkClient, zkConnection, false);
-        AdminUtils.createTopic(zkClient, topic, 3, 1, topicConfiguration);
+        AdminUtils.createTopic(zkClient, "testTopic3", 3, 1, topicConfiguration);
+        AdminUtils.createTopic(zkClient, "oozie", 3, 1, topicConfiguration);
     }
     @Ignore
     @Test

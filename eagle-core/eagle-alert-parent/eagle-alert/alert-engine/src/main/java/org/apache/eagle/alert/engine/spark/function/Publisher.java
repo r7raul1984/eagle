@@ -57,7 +57,7 @@ public class Publisher implements VoidFunction<JavaPairRDD<String, AlertStreamEv
 
     @Override
     public void call(JavaPairRDD<String, AlertStreamEvent> rdd) throws Exception {
-      //  rdd.foreachPartition(new AlertPublisherBoltFunction(publishSpecRef,sdsRef, alertPublishBoltName));
+        rdd.foreachPartition(new AlertPublisherBoltFunction(publishSpecRef,sdsRef, alertPublishBoltName));
         updateOffset();
     }
 

@@ -164,8 +164,8 @@ R: ClassTag](
   }
 
   override def compute(validTime: Time): Option[KafkaRDD[K, V, U, T, R]] = {
+    currentOffsets = topicAndPartitionHandler(currentOffsets)
     val untilOffsets = clamp(latestLeaderOffsets(maxRetries))
-    topicAndPartitionHandler(currentOffsets)
     val rdd = KafkaRDD[K, V, U, T, R](
       context.sparkContext, kafkaParams, currentOffsets, untilOffsets, messageHandler)
 

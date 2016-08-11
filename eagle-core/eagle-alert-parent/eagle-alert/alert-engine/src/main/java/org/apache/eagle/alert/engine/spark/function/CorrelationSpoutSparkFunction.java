@@ -70,6 +70,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         String topic = message._1;
         tuple.add(0, topic);
         tuple.add(1, value);
+        LOG.info("----------------------------"+topic+"----"+value);
         Tuple2StreamMetadata metadata = spoutSpec.getTuple2StreamMetadataMap().get(topic);
         if (metadata == null) {
             LOG.error(
