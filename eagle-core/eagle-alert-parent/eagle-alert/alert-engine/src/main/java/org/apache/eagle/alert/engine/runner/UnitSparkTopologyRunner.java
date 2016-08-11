@@ -16,6 +16,7 @@
  */
 package org.apache.eagle.alert.engine.runner;
 
+import com.google.common.base.Preconditions;
 import com.typesafe.config.Config;
 import kafka.common.TopicAndPartition;
 import kafka.message.MessageAndMetadata;
@@ -23,18 +24,16 @@ import kafka.serializer.StringDecoder;
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
-import org.apache.eagle.alert.engine.coordinator.IMetadataChangeNotifyService;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.spark.function.*;
-import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaRDD;
-import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.Durations;
 import org.apache.spark.streaming.api.java.JavaInputDStream;
 import org.apache.spark.streaming.api.java.JavaPairDStream;
 import org.apache.spark.streaming.api.java.JavaStreamingContext;
-import org.apache.spark.streaming.kafka.*;
+import org.apache.spark.streaming.kafka.EagleKafkaUtils;
+import org.apache.spark.streaming.kafka.KafkaCluster;
+import org.apache.spark.streaming.kafka.OffsetRange;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Predef;
@@ -44,6 +43,8 @@ import scala.collection.JavaConversions;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.eagle.alert.engine.utils.SpecUtils.getTopicsByConfig;
 
 public class UnitSparkTopologyRunner implements Serializable {
 
@@ -77,7 +78,6 @@ public class UnitSparkTopologyRunner implements Serializable {
     private final static String TOPOLOGY_MASTER = "topology.master";
 
 
-    //  private final IMetadataChangeNotifyService metadataChangeNotifyService;
     private String topologyId;
     private String groupId;
     private SparkConf sparkConf;
@@ -85,26 +85,10 @@ public class UnitSparkTopologyRunner implements Serializable {
     private long window;
 
 
-    public UnitSparkTopologyRunner(IMetadataChangeNotifyService metadataChangeNotifyService, Config config) throws InterruptedException {
+    public UnitSparkTopologyRunner(Config config) {
 
-        String inputBroker = config.getString("spout.kafkaBrokerZkQuorum");
-        kafkaParams.put("metadata.broker.list", inputBroker);
-        this.groupId = "eagle" + new Random(10).nextInt();
-        kafkaParams.put("group.id", this.groupId);
-        kafkaParams.put("auto.offset.reset", "largest");
-        // Newer version of metadata.broker.list:
-        kafkaParams.put("bootstrap.servers", inputBroker);
+        prepareKafkaConfig(config);
 
-        scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
-                .mapAsScalaMap(kafkaParams);
-        scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
-                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
-                    public Tuple2<String, String> apply(
-                            Tuple2<String, String> v1) {
-                        return v1;
-                    }
-                });
-        this.kafkaCluster = new KafkaCluster(immutableKafkaParam);
         this.config = config;
         this.topologyId = config.getString("topology.name");
         this.zkServers = config.getString("zkConfig.zkQuorum");
@@ -120,29 +104,31 @@ public class UnitSparkTopologyRunner implements Serializable {
         }
         String sparkExecutorCores = config.getString(SPARK_EXECUTOR_CORES);
         String sparkExecutorMemory = config.getString(SPARK_EXECUTOR_MEMORY);
-        // String checkpointDir = config.getString(CHECKPOINT_DIRECTORY);
         sparkConf.set("spark.executor.cores", sparkExecutorCores);
         sparkConf.set("spark.executor.memory", sparkExecutorMemory);
 
         this.sparkConf = sparkConf;
-        // this.jssc.checkpoint(checkpointDir);
-        /*this.metadataChangeNotifyService = metadataChangeNotifyService;
-        this.metadataChangeNotifyService.registerListener(this);
-        this.metadataChangeNotifyService.init(config, MetadataType.ALL);*/
 
     }
 
     public void run() throws InterruptedException {
         JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(window));
         buildTopology(jssc, config);
+        LOG.info("Starting Spark Streaming");
         jssc.start();
+        LOG.info("Spark Streaming is running");
         jssc.awaitTermination();
     }
 
+
     private void buildTopology(JavaStreamingContext jssc, Config config) {
 
-        Set<String> topics = getInitTopics(config);
-        EagleKafkaUtils.fillInLatestOffsets(topics, this.fromOffsets, this.groupId, this.kafkaCluster, this.zkServers);
+        Set<String> topics = getTopicsByConfig(config);
+        EagleKafkaUtils.fillInLatestOffsets(topics,
+                this.fromOffsets,
+                this.groupId,
+                this.kafkaCluster,
+                this.zkServers);
 
         int windowDurations = config.getInt(WINDOW_DURATIONS);
         int numOfRouter = config.getInt(ROUTER_TASK_NUM);
@@ -156,32 +142,28 @@ public class UnitSparkTopologyRunner implements Serializable {
 
 
         JavaInputDStream<MessageAndMetadata<String, String>> messages = EagleKafkaUtils.createDirectStream(jssc,
-                String.class, String.class, StringDecoder.class,
-                StringDecoder.class, streamClass, kafkaParams,
-                this.fromOffsets,fromOffsets ->fromOffsets, message -> message);
-        JavaPairDStream<String, String> pairDStream = messages.transform(new Function<JavaRDD<MessageAndMetadata<String, String>>, JavaRDD<MessageAndMetadata<String, String>>>() {
+                String.class,
+                String.class,
+                StringDecoder.class,
+                StringDecoder.class,
+                streamClass,
+                kafkaParams,
+                this.fromOffsets,
+                new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers),
+                message -> message);
 
-            SpecMetadataServiceClientImpl client = new SpecMetadataServiceClientImpl(config);
+        JavaPairDStream<String, String> pairDStream = messages
+                .transform(new FetchSpecAndTopicFunction(offsetRanges,
+                        spoutSpecRef,
+                        sdsRef,
+                        alertBoltSpecRef,
+                        publishSpecRef,
+                        topicsRef,
+                        config))
+                .mapToPair(km -> new Tuple2<>(km.topic(), km.message()));
 
-            @Override
-            public JavaRDD<MessageAndMetadata<String, String>> call(JavaRDD<MessageAndMetadata<String, String>> rdd) throws Exception {
-
-                spoutSpecRef.set(client.getSpoutSpec());
-                sdsRef.set(client.getSds());
-                alertBoltSpecRef.set(client.getAlertBoltSpec());
-                publishSpecRef.set(client.getPublishSpec());
-                topicsRef.set(getTopics(client));
-
-                OffsetRange[] offsets = ((HasOffsetRanges) rdd.rdd()).offsetRanges();
-                offsetRanges.set(offsets);
-                return rdd;
-            }
-
-            private Set<String> getTopics(SpecMetadataServiceClientImpl client) {
-                return client.getSpoutSpec().getKafka2TupleMetadataMap().keySet();
-            }
-        }).mapToPair(km -> new Tuple2<>(km.topic(), km.message()));
-        pairDStream.window(Durations.seconds(windowDurations), Durations.seconds(windowDurations))
+        pairDStream
+                .window(Durations.seconds(windowDurations), Durations.seconds(windowDurations))
                 .flatMapToPair(new CorrelationSpoutSparkFunction(numOfRouter, spoutSpecRef, sdsRef))
                 .transformToPair(new ChangePartitionTo(numOfRouter))
                 .mapPartitionsToPair(new StreamRouteBoltFunction(config, "streamBolt"))
@@ -191,9 +173,25 @@ public class UnitSparkTopologyRunner implements Serializable {
                 .foreachRDD(new Publisher(publishSpecRef, sdsRef, alertPublishBoltName, kafkaCluster, groupId, offsetRanges));
     }
 
-    private Set<String> getInitTopics(Config config) {
-        SpecMetadataServiceClientImpl client = new SpecMetadataServiceClientImpl(config);
-        return client.getSpoutSpec().getKafka2TupleMetadataMap().keySet();
+    private void prepareKafkaConfig(Config config) {
+        String inputBroker = config.getString("spout.kafkaBrokerZkQuorum");
+        this.kafkaParams.put("metadata.broker.list", inputBroker);
+        this.groupId = "eagle" + new Random(10).nextInt();
+        this.kafkaParams.put("group.id", this.groupId);
+        this.kafkaParams.put("auto.offset.reset", "largest");
+        // Newer version of metadata.broker.list:
+        this.kafkaParams.put("bootstrap.servers", inputBroker);
+
+        scala.collection.mutable.Map<String, String> mutableKafkaParam = JavaConversions
+                .mapAsScalaMap(kafkaParams);
+        scala.collection.immutable.Map<String, String> immutableKafkaParam = mutableKafkaParam
+                .toMap(new Predef.$less$colon$less<Tuple2<String, String>, Tuple2<String, String>>() {
+                    public Tuple2<String, String> apply(
+                            Tuple2<String, String> v1) {
+                        return v1;
+                    }
+                });
+        this.kafkaCluster = new KafkaCluster(immutableKafkaParam);
     }
 
 }

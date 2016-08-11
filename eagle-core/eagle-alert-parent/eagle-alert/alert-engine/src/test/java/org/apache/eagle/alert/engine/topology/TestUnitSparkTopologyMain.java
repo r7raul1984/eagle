@@ -53,10 +53,7 @@ public class TestUnitSparkTopologyMain {
         System.setProperty("config.resource", configResourceName);
         System.out.print("Set config.resource = " + configResourceName);
         Config config = ConfigFactory.load();
-        String topologyId = config.getString("topology.name");
-        SparkMockMetadataChangeNotifyService changeNotifyService =
-                new SparkMockMetadataChangeNotifyService(topologyId, "alertEngineSpout");
-        new UnitSparkTopologyRunner(changeNotifyService,config).run();
+        new UnitSparkTopologyRunner(config).run();
     }
 
     public static void main(String[] args) throws InterruptedException {

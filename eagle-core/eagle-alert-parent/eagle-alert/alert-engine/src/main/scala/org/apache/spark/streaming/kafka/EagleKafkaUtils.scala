@@ -27,6 +27,7 @@ import kafka.common.TopicAndPartition
 import kafka.message.MessageAndMetadata
 import kafka.serializer.Decoder
 import org.I0Itec.zkclient.ZkClient
+import org.apache.commons.collections.CollectionUtils
 import org.apache.spark.api.java.function.{Function => JFunction}
 import org.apache.spark.internal.Logging
 import org.apache.spark.streaming.StreamingContext
@@ -61,16 +62,16 @@ object EagleKafkaUtils extends Logging {
     * that the output operation is idempotent, or use transactions to output records atomically.
     * See the programming guide for more details.
     *
-    * @param ssc            StreamingContext object
-    * @param kafkaParams    Kafka <a href="http://kafka.apache.org/documentation.html#configuration">
-    *                       configuration parameters</a>. Requires "metadata.broker.list" or "bootstrap.servers"
-    *                       to be set with Kafka broker(s) (NOT zookeeper servers) specified in
-    *                       host1:port1,host2:port2 form.
-    * @param fromOffsets    Per-topic/partition Kafka offsets defining the (inclusive)
-    *                       starting point of the stream
+    * @param ssc                      StreamingContext object
+    * @param kafkaParams              Kafka <a href="http://kafka.apache.org/documentation.html#configuration">
+    *                                 configuration parameters</a>. Requires "metadata.broker.list" or "bootstrap.servers"
+    *                                 to be set with Kafka broker(s) (NOT zookeeper servers) specified in
+    *                                 host1:port1,host2:port2 form.
+    * @param fromOffsets              Per-topic/partition Kafka offsets defining the (inclusive)
+    *                                 starting point of the stream
     * @param topicAndPartitionHandler Chang Map[TopicAndPartition, Long] dynamically to
     *                                 support add/remove topic without restart
-    * @param messageHandler Function for translating each message and metadata into the desired type
+    * @param messageHandler           Function for translating each message and metadata into the desired type
     * @tparam K  type of Kafka message key
     * @tparam V  type of Kafka message value
     * @tparam KD type of Kafka message key decoder
@@ -78,7 +79,7 @@ object EagleKafkaUtils extends Logging {
     * @tparam R  type returned by messageHandler
     * @return DStream of R
     */
-  def createDirectStream[
+  def createDirectStream1[
   K: ClassTag,
   V: ClassTag,
   KD <: Decoder[K] : ClassTag,
@@ -91,8 +92,9 @@ object EagleKafkaUtils extends Logging {
                 messageHandler: MessageAndMetadata[K, V] => R
               ): InputDStream[R] = {
     val cleanedHandler = ssc.sc.clean(messageHandler)
+    val cleanedTopicAndPartitionHandler = ssc.sc.clean(topicAndPartitionHandler)
     new DynamicTopicKafkaInputDStream[K, V, KD, VD, R](
-      ssc, kafkaParams, fromOffsets,topicAndPartitionHandler, cleanedHandler)
+      ssc, kafkaParams, fromOffsets, cleanedTopicAndPartitionHandler, cleanedHandler)
   }
 
 
@@ -117,21 +119,21 @@ object EagleKafkaUtils extends Logging {
     * that the output operation is idempotent, or use transactions to output records atomically.
     * See the programming guide for more details.
     *
-    * @param jssc              JavaStreamingContext object
-    * @param keyClass          Class of the keys in the Kafka records
-    * @param valueClass        Class of the values in the Kafka records
-    * @param keyDecoderClass   Class of the key decoder
-    * @param valueDecoderClass Class of the value decoder
-    * @param recordClass       Class of the records in DStream
-    * @param kafkaParams       Kafka <a href="http://kafka.apache.org/documentation.html#configuration">
-    *                          configuration parameters</a>. Requires "metadata.broker.list" or "bootstrap.servers"
-    *                          to be set with Kafka broker(s) (NOT zookeeper servers), specified in
-    *                          host1:port1,host2:port2 form.
-    * @param fromOffsets       Per-topic/partition Kafka offsets defining the (inclusive)
-    *                          starting point of the stream
+    * @param jssc                     JavaStreamingContext object
+    * @param keyClass                 Class of the keys in the Kafka records
+    * @param valueClass               Class of the values in the Kafka records
+    * @param keyDecoderClass          Class of the key decoder
+    * @param valueDecoderClass        Class of the value decoder
+    * @param recordClass              Class of the records in DStream
+    * @param kafkaParams              Kafka <a href="http://kafka.apache.org/documentation.html#configuration">
+    *                                 configuration parameters</a>. Requires "metadata.broker.list" or "bootstrap.servers"
+    *                                 to be set with Kafka broker(s) (NOT zookeeper servers), specified in
+    *                                 host1:port1,host2:port2 form.
+    * @param fromOffsets              Per-topic/partition Kafka offsets defining the (inclusive)
+    *                                 starting point of the stream
     * @param topicAndPartitionHandler Chang Map[TopicAndPartition, Long] dynamically to
     *                                 support add/remove topic without restart
-    * @param messageHandler    Function for translating each message and metadata into the desired type
+    * @param messageHandler           Function for translating each message and metadata into the desired type
     * @tparam K  type of Kafka message key
     * @tparam V  type of Kafka message value
     * @tparam KD type of Kafka message key decoder
@@ -148,7 +150,7 @@ object EagleKafkaUtils extends Logging {
                                                                        recordClass: Class[R],
                                                                        kafkaParams: JMap[String, String],
                                                                        fromOffsets: JMap[TopicAndPartition, JLong],
-                                                                       topicAndPartitionHandler: Map[TopicAndPartition, Long] => Map[TopicAndPartition, Long],
+                                                                       topicAndPartitionHandler: JFunction[Map[TopicAndPartition, Long], Map[TopicAndPartition, Long]],
                                                                        messageHandler: JFunction[MessageAndMetadata[K, V], R]
                                                                      ): JavaInputDStream[R] = {
     implicit val keyCmt: ClassTag[K] = ClassTag(keyClass)
@@ -157,11 +159,12 @@ object EagleKafkaUtils extends Logging {
     implicit val valueDecoderCmt: ClassTag[VD] = ClassTag(valueDecoderClass)
     implicit val recordCmt: ClassTag[R] = ClassTag(recordClass)
     val cleanedHandler = jssc.sparkContext.clean(messageHandler.call _)
-    createDirectStream[K, V, KD, VD, R](
+    val cleanedTopicAndPartitionHandler = jssc.sparkContext.clean(topicAndPartitionHandler.call _)
+    createDirectStream1[K, V, KD, VD, R](
       jssc.ssc,
       Map(kafkaParams.asScala.toSeq: _*),
       Map(fromOffsets.asScala.mapValues(_.longValue()).toSeq: _*),
-      topicAndPartitionHandler,
+      cleanedTopicAndPartitionHandler,
       cleanedHandler
     )
   }
@@ -180,9 +183,9 @@ object EagleKafkaUtils extends Logging {
     }
   }
 
-  def fillInLatestOffsets(topics: JSet[String], fromOffsets: JMap[TopicAndPartition, JLong], groupId: String, kafkaCluster: KafkaCluster, zkServers: String) {
+  def fillInLatestOffsets(topics: JSet[String], fromOffsets: JMap[TopicAndPartition, JLong], groupId: String, kafkaCluster: KafkaCluster, zkServers: String): Unit = {
 
-    if(topics.isEmpty){
+    if (topics.isEmpty) {
       throw new IllegalArgumentException
     }
     val zkClient: ZkClient = new ZkClient(zkServers, ZK_TIMEOUT_MSEC, ZK_TIMEOUT_MSEC);
@@ -190,7 +193,6 @@ object EagleKafkaUtils extends Logging {
       val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
       logInfo("effectiveTopics" + effectiveTopics)
       val tp = kafkaCluster.getPartitions(effectiveTopics.toSet).right.get
-
       tp.foreach(
         eachTp => {
           val result = kafkaCluster.getConsumerOffsets(groupId, Set(eachTp))
@@ -203,7 +205,46 @@ object EagleKafkaUtils extends Logging {
           }
         }
       )
+
       logInfo("fillInLatestOffsets fromOffsets" + fromOffsets)
+    } finally {
+      zkClient.close;
+    }
+  }
+
+  def refreshOffsets(topics: JSet[String], currentOffsets: JMap[TopicAndPartition, JLong], groupId: String, kafkaCluster: KafkaCluster, zkServers: String): Unit = {
+    if(topics == null){//first init
+      return
+    }
+    val zkClient: ZkClient = new ZkClient(zkServers, ZK_TIMEOUT_MSEC, ZK_TIMEOUT_MSEC);
+    try {
+      val effectiveTopics = topics.asScala.filter(topic => AdminUtils.topicExists(zkClient, topic))
+      val tp = kafkaCluster.getPartitions(effectiveTopics.toSet).right.get
+
+      currentOffsets.asScala.keys.foreach(
+        currentTp => {
+          if (!tp.contains(currentTp)) {
+            currentOffsets.remove(currentTp) //remove nouse TopicAndPartition
+          }
+        }
+      )
+
+      tp.foreach(
+        eachTp => {
+          if (!currentOffsets.containsKey(tp)) {
+            //add new TopicAndPartition
+            val result = kafkaCluster.getConsumerOffsets(groupId, Set(eachTp))
+            if (result.isLeft) {
+              currentOffsets.put(eachTp, 0L)
+            } else {
+              result.right.get.foreach(tpAndOffset => {
+                currentOffsets.put(tpAndOffset._1, tpAndOffset._2)
+              })
+            }
+          }
+        }
+      )
+
     } finally {
       zkClient.close;
     }
