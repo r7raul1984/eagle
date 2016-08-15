@@ -80,7 +80,7 @@ object EagleKafkaUtils extends Logging {
     * @tparam R  type returned by messageHandler
     * @return DStream of R
     */
-  def createDirectStream1[
+  def createDirectStreamWIthHandler[
   K: ClassTag,
   V: ClassTag,
   KD <: Decoder[K] : ClassTag,
@@ -161,7 +161,7 @@ object EagleKafkaUtils extends Logging {
     implicit val recordCmt: ClassTag[R] = ClassTag(recordClass)
     val cleanedHandler = jssc.sparkContext.clean(messageHandler.call _)
     val cleanedTopicAndPartitionHandler = jssc.sparkContext.clean(topicAndPartitionHandler.call _)
-    createDirectStream1[K, V, KD, VD, R](
+    createDirectStreamWIthHandler[K, V, KD, VD, R](
       jssc.ssc,
       Map(kafkaParams.asScala.toSeq: _*),
       Map(fromOffsets.asScala.mapValues(_.longValue()).toSeq: _*),

@@ -14,6 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.eagle.alert.engine.spark.function;
 
 import org.apache.eagle.alert.coordination.model.PublishSpec;
@@ -23,16 +24,21 @@ import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.publisher.AlertPublisher;
 import org.apache.eagle.alert.engine.publisher.impl.AlertPublisherImpl;
 import org.apache.eagle.alert.engine.runner.MapComparator;
+
 import org.apache.spark.api.java.function.VoidFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<String, AlertStreamEvent>>> {
-    private final static Logger LOG = LoggerFactory.getLogger(AlertPublisherBoltFunction.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AlertPublisherBoltFunction.class);
 
     private Map<String, Publishment> cachedPublishments = new HashMap<>();
 
@@ -45,7 +51,6 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
         this.sdsRef = sdsRef;
         this.alertPublishBoltName = alertPublishBoltName;
     }
-
 
     @Override
     public void call(Iterator<Tuple2<String, AlertStreamEvent>> tuple2Iterator) throws Exception {
@@ -65,7 +70,9 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
     }
 
     private void onAlertPublishSpecChange(AlertPublisher alertPublisher, PublishSpec pubSpec, Map<String, StreamDefinition> sds) {
-        if (pubSpec == null) return;
+        if (pubSpec == null) {
+            return;
+        }
 
         List<Publishment> newPublishments = pubSpec.getPublishments();
         if (newPublishments == null) {

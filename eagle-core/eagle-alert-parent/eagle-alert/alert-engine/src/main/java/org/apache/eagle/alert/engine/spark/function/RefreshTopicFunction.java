@@ -14,8 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.eagle.alert.engine.spark.function;
 
+package org.apache.eagle.alert.engine.spark.function;
 
 import kafka.common.TopicAndPartition;
 import org.apache.spark.api.java.function.Function;
@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
 
 public class RefreshTopicFunction implements Function<scala.collection.immutable.Map<TopicAndPartition, Object>, scala.collection.immutable.Map<TopicAndPartition, Object>> {
 
@@ -60,13 +59,12 @@ public class RefreshTopicFunction implements Function<scala.collection.immutable
             oldOffsetWithTypeMap.put(topicAndPartition, Long.parseLong(offset.toString()));
         });
 
-
-        Map<TopicAndPartition, Object> newOffset= EagleKafkaUtils.refreshOffsets(topicsRef.get(),
+        Map<TopicAndPartition, Object> newOffset = EagleKafkaUtils.refreshOffsets(topicsRef.get(),
                 oldOffsetWithTypeMap,
                 this.groupId,
                 this.kafkaCluster,
                 this.zkServers);
-        if(newOffset == null){
+        if (newOffset == null) {
             LOG.info("first init app so remain the oldOffset");
             return oldOffset;
         }

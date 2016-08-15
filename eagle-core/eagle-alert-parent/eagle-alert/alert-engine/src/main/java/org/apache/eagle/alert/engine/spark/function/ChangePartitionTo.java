@@ -14,15 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.eagle.alert.engine.spark.function;
 
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.spark.partition.StreamRoutePartitioner;
+
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.function.Function;
 
 public class ChangePartitionTo implements Function<JavaPairRDD<Integer, PartitionedEvent>, JavaPairRDD<Integer, PartitionedEvent>> {
-    private int numParts;// can be dynamic set like executor in storm
+    private int numParts;
 
     public ChangePartitionTo(int numParts) {
         this.numParts = numParts;

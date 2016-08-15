@@ -14,25 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.eagle.alert.engine.spark.function;
 
-import com.typesafe.config.Config;
-import kafka.message.MessageAndMetadata;
+import static org.apache.eagle.alert.engine.utils.SpecUtils.getTopicsByClient;
+
 import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
+
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
 import org.apache.spark.streaming.kafka.HasOffsetRanges;
 import org.apache.spark.streaming.kafka.OffsetRange;
+import com.typesafe.config.Config;
+import kafka.message.MessageAndMetadata;
 
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
-
-import static org.apache.eagle.alert.engine.utils.SpecUtils.getTopicsByClient;
 
 public class FetchSpecAndTopicFunction implements Function<JavaRDD<MessageAndMetadata<String, String>>, JavaRDD<MessageAndMetadata<String, String>>> {
 

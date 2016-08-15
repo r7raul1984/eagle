@@ -14,15 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.eagle.alert.engine.spark.function;
 
-import kafka.common.TopicAndPartition;
 import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
+
+import kafka.common.TopicAndPartition;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.function.VoidFunction;
-import org.apache.spark.streaming.kafka.EagleKafkaUtils;
 import org.apache.spark.streaming.kafka.KafkaCluster;
 import org.apache.spark.streaming.kafka.OffsetRange;
 import org.slf4j.Logger;
@@ -35,7 +36,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
-
 public class Publisher implements VoidFunction<JavaPairRDD<String, AlertStreamEvent>> {
 
     private AtomicReference<PublishSpec> publishSpecRef;
@@ -44,9 +44,9 @@ public class Publisher implements VoidFunction<JavaPairRDD<String, AlertStreamEv
     private KafkaCluster kafkaCluster;
     private String groupId;
     private AtomicReference<OffsetRange[]> offsetRanges;
-    private final static Logger LOG = LoggerFactory.getLogger(Publisher.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Publisher.class);
 
-    public Publisher(AtomicReference<PublishSpec> publishSpecRef, AtomicReference<Map<String, StreamDefinition>> sdsRef, String alertPublishBoltName, KafkaCluster kafkaCluster, String groupId,AtomicReference<OffsetRange[]> offsetRanges) {
+    public Publisher(AtomicReference<PublishSpec> publishSpecRef, AtomicReference<Map<String, StreamDefinition>> sdsRef, String alertPublishBoltName, KafkaCluster kafkaCluster, String groupId, AtomicReference<OffsetRange[]> offsetRanges) {
         this.publishSpecRef = publishSpecRef;
         this.sdsRef = sdsRef;
         this.alertPublishBoltName = alertPublishBoltName;
@@ -57,7 +57,7 @@ public class Publisher implements VoidFunction<JavaPairRDD<String, AlertStreamEv
 
     @Override
     public void call(JavaPairRDD<String, AlertStreamEvent> rdd) throws Exception {
-        rdd.foreachPartition(new AlertPublisherBoltFunction(publishSpecRef,sdsRef, alertPublishBoltName));
+        rdd.foreachPartition(new AlertPublisherBoltFunction(publishSpecRef, sdsRef, alertPublishBoltName));
         updateOffset();
     }
 

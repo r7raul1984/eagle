@@ -14,11 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.eagle.alert.engine.spark.function;
 
-import backtype.storm.metric.api.MultiCountMetric;
-import com.typesafe.config.Config;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
 import org.apache.eagle.alert.coordination.model.StreamRouterSpec;
 import org.apache.eagle.alert.engine.StreamContextImpl;
@@ -31,57 +29,60 @@ import org.apache.eagle.alert.engine.router.impl.SparkStreamRouterBoltOutputColl
 import org.apache.eagle.alert.engine.router.impl.StreamRouterImpl;
 import org.apache.eagle.alert.engine.serialization.SerializationMetadataProvider;
 import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
+
+import backtype.storm.metric.api.MultiCountMetric;
+import com.typesafe.config.Config;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.Tuple2;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import java.util.Collection;
+import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicReference;
 
-public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<Integer,PartitionedEvent>>, Integer, PartitionedEvent>, SerializationMetadataProvider {
+public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<Integer, PartitionedEvent>>, Integer, PartitionedEvent> {
 
-    private final static Logger LOG = LoggerFactory.getLogger(StreamRouteBoltFunction.class);
+    private static final Logger LOG = LoggerFactory.getLogger(StreamRouteBoltFunction.class);
     private static final long serialVersionUID = -7211470889316430372L;
     // mapping from StreamPartition to StreamSortSpec
     private Map<StreamPartition, StreamSortSpec> cachedSSS = new HashMap<>();
     // mapping from StreamPartition(streamId, groupbyspec) to StreamRouterSpec
     private Map<StreamPartition, StreamRouterSpec> cachedSRS = new HashMap<>();
-    private Map<String, StreamDefinition> sdf = new HashMap<>();
-    private RouterSpec routerSpec;
+    private AtomicReference<RouterSpec> routerSpecRef;
+    private AtomicReference<Map<String, StreamDefinition>> sdsRef;
     private String name;
-    private Config config;
 
-    public StreamRouteBoltFunction(RouterSpec routerSpec, Map<String, StreamDefinition> sds,String name) {
-        this.routerSpec = routerSpec;
-        this.sdf = sds;
+    public StreamRouteBoltFunction(String name, AtomicReference<RouterSpec> routerSpecRef, AtomicReference<Map<String, StreamDefinition>> sdsRef) {
         this.name = name;
-    }
-
-    public StreamRouteBoltFunction(Config config ,String name) {
-        this.name = name;
-        this.config = config;
+        this.routerSpecRef = routerSpecRef;
+        this.sdsRef = sdsRef;
     }
 
     @Override
     public Iterator<Tuple2<Integer, PartitionedEvent>> call(Iterator<Tuple2<Integer, PartitionedEvent>> tuple2Iterator) throws Exception {
 
-        SpecMetadataServiceClientImpl client = new SpecMetadataServiceClientImpl(config);
-        this.sdf = client.getSds();
-        this.routerSpec = client.getRouterSpec();
+        RouterSpec routerSpec = routerSpecRef.get();
+        Map<String, StreamDefinition> sdf = sdsRef.get();
         SparkStreamRouterBoltOutputCollector routeCollector = new SparkStreamRouterBoltOutputCollector(name);
         StreamRouter router = new StreamRouterImpl(name);
+        //TODO StreamContext need to be more abstract
         router.prepare(new StreamContextImpl(null, new MultiCountMetric(), null), routeCollector);
-        onStreamRouteBoltSpecChange(router, routeCollector, this.routerSpec, sdf);
+        onStreamRouteBoltSpecChange(router, routeCollector, routerSpec, sdf);
 
         while (tuple2Iterator.hasNext()) {
             Tuple2<Integer, PartitionedEvent> tuple2 = tuple2Iterator.next();
-            PartitionedEvent partitionedEvent = (PartitionedEvent) tuple2._2();
+            PartitionedEvent partitionedEvent = tuple2._2();
             router.nextEvent(partitionedEvent);
         }
         cleanup(router);
         return routeCollector.emitResult().iterator();
     }
-
 
     public void cleanup(StreamRouter router) {
         router.close();
@@ -152,14 +153,6 @@ public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tup
         routeCollector.onStreamRouterSpecChange(addedRouterSpecs, removedRouterSpecs, modifiedRouterSpecs, sds);
         // switch cache
         cachedSRS = newSRS;
-        sdf = sds;
     }
-
-
-    @Override
-    public StreamDefinition getStreamDefinition(String streamId) {
-        return this.sdf.get(streamId);
-    }
-
 
 }

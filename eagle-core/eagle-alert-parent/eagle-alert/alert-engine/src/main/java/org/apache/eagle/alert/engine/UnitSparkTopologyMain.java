@@ -14,11 +14,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.eagle.alert.engine;
+
+import org.apache.eagle.alert.engine.runner.UnitSparkTopologyRunner;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import org.apache.eagle.alert.engine.runner.UnitSparkTopologyRunner;
 
 public class UnitSparkTopologyMain {
     public static void main(String[] args) throws InterruptedException {
