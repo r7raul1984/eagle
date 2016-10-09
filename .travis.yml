@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-language: java
-script: mvn clean test
+script:
+  - sudo rm /etc/mavenrc
+  - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
+  - mvn clean test
 jdk:
   - oraclejdk8
