@@ -18,6 +18,6 @@ env:
 script:
   - sudo rm /etc/mavenrc
   - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
-  - mvn clean test
+  - mvn clean test --quiet
 jdk:
   - oraclejdk8
