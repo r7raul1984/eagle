@@ -18,6 +18,16 @@ env:
 script:
   - sudo rm /etc/mavenrc
   - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
-  - mvn clean test --quiet
+  - mvn clean package --quiet
 jdk:
   - oraclejdk8
+notifications:
+  email:
+    recipients:
+      - chenchang@yhd.com
+      - heju@yhd.com
+      - tangjijun@yhd.com
+      - wangyuming@yhd.com
+      - denglingang@yhd.com
+    on_success: change
+    on_failure: always
