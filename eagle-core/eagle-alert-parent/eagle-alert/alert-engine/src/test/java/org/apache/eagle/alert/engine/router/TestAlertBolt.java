@@ -59,6 +59,7 @@ import static org.mockito.Mockito.when;
 /**
  * Since 5/2/16.
  */
+@Ignore
 @SuppressWarnings( {"rawtypes", "unused"})
 public class TestAlertBolt {
 
