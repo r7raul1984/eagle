@@ -32,7 +32,7 @@ For more details, please visit [https://eagle.incubator.apache.org](https://eagl
 ### Branches
 | name | status | version | description |
 | :---:| :---: | :---: | :--- |
-| **master** | [![Build Status](https://builds.apache.org/buildStatus/icon?job=incubator-eagle-main)](https://builds.apache.org/job/incubator-eagle-main/) | 0.5.0-incubating-SNAPSHOT | Branch for continuous development. |
+| **master** | [![Build Status](https://travis-ci.org/r7raul1984/incubator-eagle.svg?branch=testCI)](https://travis-ci.org/r7raul1984/incubator-eagle) | 0.5.0-incubating-SNAPSHOT | Branch for continuous development. |
 
 ### Latest Release
 
