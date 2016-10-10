@@ -17,8 +17,7 @@ env:
   - TERM=dumb
 script:
   - sudo rm /etc/mavenrc
-  - sudo rm /tmp/log.txt
   - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
-  - mvn clean test --quiet -l /tmp/log.txt
+  - mvn clean test --quiet
 jdk:
   - oraclejdk8
