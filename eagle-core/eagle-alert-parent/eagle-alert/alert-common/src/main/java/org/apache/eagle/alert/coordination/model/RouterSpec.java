@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class RouterSpec implements Serializable {
-public class RouterSpec {
     private String version;
     private String topologyName;
 

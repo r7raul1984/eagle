@@ -52,6 +52,7 @@ public class WindowState implements Serializable {
         this.streamWindowAccum = streamWindowAccum;
         this.streamSortHandlersAccum = streamSortHandlersAccum;
     }
+
     public WindowState(Accumulator<Map<Integer, Map<String, StreamTimeClock>>> streamIdClockAccum, Accumulator<Map<Integer, Map<StreamTimeClockListener, String>>> streamWindowAccum,
                        Accumulator<Map<Integer, Map<StreamPartition, StreamSortHandler>>> streamSortHandlersAccum) {
         this.streamIdClockAccum = streamIdClockAccum;

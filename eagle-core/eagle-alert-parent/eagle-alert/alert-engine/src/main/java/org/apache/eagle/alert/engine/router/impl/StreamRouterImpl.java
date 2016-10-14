@@ -68,11 +68,12 @@ public class StreamRouterImpl implements StreamRouter {
         this.context = context;
     }
 
-    public void prepare(StreamContext context, PartitionedEventCollector outputCollector, Map<StreamTimeClockListener, String> listenerStreamIdMap, Map<String, StreamTimeClock> streamIdTimeClockMap, Map<StreamPartition, StreamSortHandler> streamSortHandlerMap) {
+    public void prepare(StreamContext context, PartitionedEventCollector outputCollector, Map<StreamTimeClockListener, String> listenerStreamIdMap,
+                        Map<String, StreamTimeClock> streamIdTimeClockMap, Map<StreamPartition, StreamSortHandler> streamSortHandlerMap) {
 
         this.streamSortHandlers = streamSortHandlerMap;
         this.outputCollector = outputCollector;
-        listenerStreamIdMap.forEach((k,v)->{
+        listenerStreamIdMap.forEach((k,v) -> {
             StreamSortWindowHandlerImpl streamwindow = (StreamSortWindowHandlerImpl)k;
             streamwindow.updateOutputCollector(this.outputCollector);
         });
@@ -183,6 +184,7 @@ public class StreamRouterImpl implements StreamRouter {
     public Map<StreamTimeClockListener, String> getAllListenerStreamIdMap() {
         return streamTimeClockManager.getAllListenerStreamIdMap();
     }
+
     public Map<StreamPartition,StreamSortHandler> getAllStreamSortHandlerMap() {
         return this.streamSortHandlers;
     }

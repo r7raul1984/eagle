@@ -153,11 +153,11 @@ public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tup
                 modified.put(s, newSSS.get(s));
             }
         });
-      //  if (LOG.isDebugEnabled()) {
+        if (LOG.isDebugEnabled()) {
             LOG.debug("added StreamSortSpec " + added);
             LOG.debug("removed StreamSortSpec " + removed);
             LOG.debug("modified StreamSortSpec " + modified);
-     //   }
+        }
         router.onStreamSortSpecChange(added, removed, modified);
         // switch cache
         this.cachedSSS = newSSS;

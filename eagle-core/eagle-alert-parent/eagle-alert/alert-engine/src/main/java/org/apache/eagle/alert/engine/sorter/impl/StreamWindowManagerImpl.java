@@ -40,18 +40,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class StreamWindowManagerImpl implements StreamWindowManager {
-    private static final Logger LOG = LoggerFactory.getLogger(StreamWindowManagerImpl.class);
-    private final TreeMap<Long, StreamWindow> windowBuckets;
-    private final PartitionedEventCollector collector;
 public class StreamWindowManagerImpl implements StreamWindowManager, Serializable {
-    private final static Logger LOG = LoggerFactory.getLogger(StreamWindowManagerImpl.class);
+    private static final Logger LOG = LoggerFactory.getLogger(StreamWindowManagerImpl.class);
     private final TreeMap<Long,StreamWindow> windowBuckets;
     private PartitionedEventCollector collector;
     private final Period windowPeriod;
     private final long windowMargin;
     @SuppressWarnings("unused")
-    private transient final Comparator<PartitionedEvent> comparator;
+    private final transient Comparator<PartitionedEvent> comparator;
     private long rejectTime;
 
     public StreamWindowManagerImpl(Period windowPeriod, long windowMargin, Comparator<PartitionedEvent> comparator, PartitionedEventCollector collector) {

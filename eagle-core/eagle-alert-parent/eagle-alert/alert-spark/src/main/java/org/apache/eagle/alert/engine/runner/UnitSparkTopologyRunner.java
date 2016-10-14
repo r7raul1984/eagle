@@ -139,8 +139,7 @@ public class UnitSparkTopologyRunner implements Serializable {
                 streamClass,
                 kafkaParams,
                 this.fromOffsets,
-                new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers),
-                message -> message);
+                new RefreshTopicFunction(this.topicsRef, this.groupId, this.kafkaCluster, this.zkServers), message -> message);
 
         WindowState winstate = new WindowState(jssc);
         RouteState routeState = new RouteState(jssc);

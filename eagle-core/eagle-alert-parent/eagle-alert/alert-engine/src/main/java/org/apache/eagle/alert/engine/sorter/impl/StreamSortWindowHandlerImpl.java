@@ -32,10 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class StreamSortWindowHandlerImpl implements StreamSortHandler, Serializable {
-    private final static Logger LOG = LoggerFactory.getLogger(StreamSortWindowHandlerImpl.class);
-import java.io.IOException;
-
-public class StreamSortWindowHandlerImpl implements StreamSortHandler {
     private static final Logger LOG = LoggerFactory.getLogger(StreamSortWindowHandlerImpl.class);
     private StreamWindowManager windowManager;
     private StreamSortSpec streamSortSpecSpec;
@@ -44,10 +40,10 @@ public class StreamSortWindowHandlerImpl implements StreamSortHandler {
 
     public void prepare(String streamId, StreamSortSpec streamSortSpecSpec, PartitionedEventCollector outputCollector) {
         this.windowManager = new StreamWindowManagerImpl(
-            Period.parse(streamSortSpecSpec.getWindowPeriod()),
-            streamSortSpecSpec.getWindowMargin(),
-            PartitionedEventTimeOrderingComparator.INSTANCE,
-            outputCollector);
+                Period.parse(streamSortSpecSpec.getWindowPeriod()),
+                streamSortSpecSpec.getWindowMargin(),
+                PartitionedEventTimeOrderingComparator.INSTANCE,
+                outputCollector);
         this.streamSortSpecSpec = streamSortSpecSpec;
         this.streamId = streamId;
         this.outputCollector = outputCollector;
@@ -119,7 +115,7 @@ public class StreamSortWindowHandlerImpl implements StreamSortHandler {
     public void updateOutputCollector(PartitionedEventCollector outputCollector) {
         this.outputCollector = outputCollector;
         if (this.windowManager != null) {
-            StreamWindowManagerImpl windowImpl = (StreamWindowManagerImpl)this.windowManager;
+            StreamWindowManagerImpl windowImpl = (StreamWindowManagerImpl) this.windowManager;
             windowImpl.updateOutputCollector(outputCollector);
         }
     }

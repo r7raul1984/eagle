@@ -74,7 +74,7 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
                 //TODO StreamContext need to be more abstract
                 Map<String, PolicyDefinition> policyDefinitionMap = policyState.getPolicyDefinitionByBoltId(boltId);
                 Map<String, PolicyStreamHandler> policyStreamHandlerMap = policyState.getPolicyStreamHandlerByBoltId(boltId);
-                policyGroupEvaluator.init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector, policyDefinitionMap, policyStreamHandlerMap);
+                // policyGroupEvaluator.init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector, policyDefinitionMap, policyStreamHandlerMap);
                 onAlertBoltSpecChange(boltId, spec, sds, policyGroupEvaluator, policyState);
             }
             PartitionedEvent event = tuple2._2;
@@ -82,7 +82,7 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
         }
 
         cleanup(policyGroupEvaluator, alertOutputCollector);
-        if(alertOutputCollector == null){
+        if (alertOutputCollector == null) {
             return Collections.emptyIterator();
         }
         return alertOutputCollector.emitResult().iterator();
@@ -101,7 +101,7 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
         comparator.compare();
         policyGroupEvaluator.onPolicyChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), sds);
 
-        policyState.store(boltId, newPoliciesMap, policyGroupEvaluator.getPolicyDefinitionMap(), policyGroupEvaluator.getPolicyStreamHandlerMap());
+        // policyState.store(boltId, newPoliciesMap, policyGroupEvaluator.getPolicyDefinitionMap(), policyGroupEvaluator.getPolicyStreamHandlerMap());
     }
 
     public void cleanup(PolicyGroupEvaluator policyGroupEvaluator, AlertBoltOutputCollectorSparkWrapper alertOutputCollector) {

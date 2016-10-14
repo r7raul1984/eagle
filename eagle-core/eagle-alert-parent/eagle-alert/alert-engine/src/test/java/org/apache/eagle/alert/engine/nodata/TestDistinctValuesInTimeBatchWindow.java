@@ -21,11 +21,12 @@ import org.apache.eagle.alert.engine.evaluator.nodata.NoDataPolicyTimeBatchHandl
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.mockito.Matchers.anyObject;
 import static org.mockito.Mockito.*;
-
+@Ignore
 public class TestDistinctValuesInTimeBatchWindow {
 
     private static final String inputStream = "testInputStream";

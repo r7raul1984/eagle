@@ -56,7 +56,7 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
         Thread.currentThread().setName(policyEvaluatorId);
     }
 
-    public void init(StreamContext context, AlertStreamCollector collector, Map<String, PolicyDefinition> policyDefinitionMap, Map<String, PolicyStreamHandler> policyStreamHandlerMap) {
+    public void init(StreamContext context, AlertStreamCollector collector, Map<String, PolicyDefinition> policyDefinitionMap, Map<String, CompositePolicyHandler> policyStreamHandlerMap) {
         this.collector = collector;
         this.policyStreamHandlerMap = policyStreamHandlerMap;
         this.policyDefinitionMap = policyDefinitionMap;
@@ -198,7 +198,7 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
         return this.policyDefinitionMap;
     }
 
-    public Map<String, PolicyStreamHandler> getPolicyStreamHandlerMap() {
+    public Map<String, CompositePolicyHandler> getPolicyStreamHandlerMap() {
         return this.policyStreamHandlerMap;
     }
 

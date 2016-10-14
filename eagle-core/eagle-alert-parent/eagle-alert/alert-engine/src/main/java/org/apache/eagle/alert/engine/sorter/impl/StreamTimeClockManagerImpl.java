@@ -101,7 +101,7 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
     }
 
     /**
-     * @param streamId
+     * @param streamId.
      */
     @Override
     public void removeStreamTimeClock(String streamId) {

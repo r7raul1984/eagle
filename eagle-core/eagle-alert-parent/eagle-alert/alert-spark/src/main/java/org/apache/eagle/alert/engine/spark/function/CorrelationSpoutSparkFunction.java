@@ -53,9 +53,6 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
     @Override
     public Iterator<Tuple2<Integer, PartitionedEvent>> call(Tuple2<String, String> message) {
 
-        Map<String, StreamDefinition> sds = sdsRef.get();
-        SpoutSpec spoutSpec = spoutSpecRef.get();
-
         ObjectMapper mapper = new ObjectMapper();
         TypeReference<HashMap<String, Object>> typeRef = new TypeReference<HashMap<String, Object>>() {
         };
@@ -70,6 +67,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         String topic = message._1;
         tuple.add(0, topic);
         tuple.add(1, value);
+        SpoutSpec spoutSpec = spoutSpecRef.get();
         Tuple2StreamMetadata metadata = spoutSpec.getTuple2StreamMetadataMap().get(topic);
         if (metadata == null) {
             LOG.error(
@@ -87,7 +85,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         }
         Map<String, Object> messageContent = (Map<String, Object>) tupleContent.get(3);
         Object streamId = tupleContent.get(1);
-
+        Map<String, StreamDefinition> sds = sdsRef.get();
         StreamDefinition sd = sds.get(streamId);
         if (sd == null) {
             LOG.warn("StreamDefinition {} is not found within {}, ignore this message", streamId, sds);
@@ -139,7 +137,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private StreamEvent convertToStreamEventByStreamDefinition(long timestamp, Map messageContent, StreamDefinition sd) {
-        return StreamEvent.Builder().timestamep(timestamp).attributes(messageContent, sd).build();
+        return null;//StreamEvent.Builder().timestamep(timestamp).attributes(messageContent, sd).build();
     }
 
 }

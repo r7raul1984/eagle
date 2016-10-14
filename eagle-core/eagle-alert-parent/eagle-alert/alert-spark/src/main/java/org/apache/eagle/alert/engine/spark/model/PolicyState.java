@@ -44,7 +44,7 @@ public class PolicyState implements Serializable {
 
     private Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler;
 
-    public PolicyState(JavaStreamingContext jssc){
+    public PolicyState(JavaStreamingContext jssc) {
         Accumulator<Map<String, Map<String, PolicyDefinition>>> cachedPolicies = jssc.sparkContext().accumulator(new HashMap<>(), "policyAccum", new MapAccum());
         Accumulator<Map<String, Map<String, PolicyDefinition>>> policyDefinition = jssc.sparkContext().accumulator(new HashMap<>(), "policyDefinitionAccum", new MapAccum());
         Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler = jssc.sparkContext().accumulator(new HashMap<>(), "policyStreamHandlerAccum", new MapAccum());
@@ -53,7 +53,8 @@ public class PolicyState implements Serializable {
         this.policyStreamHandler = policyStreamHandler;
     }
 
-    public PolicyState(Accumulator<Map<String, Map<String, PolicyDefinition>>> cachedPolicies, Accumulator<Map<String, Map<String, PolicyDefinition>>> policyDefinition, Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler) {
+    public PolicyState(Accumulator<Map<String, Map<String, PolicyDefinition>>> cachedPolicies, Accumulator<Map<String, Map<String, PolicyDefinition>>> policyDefinition,
+                       Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler) {
         this.cachedPolicies = cachedPolicies;
         this.policyDefinition = policyDefinition;
         this.policyStreamHandler = policyStreamHandler;

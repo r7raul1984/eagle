@@ -26,8 +26,6 @@ import java.util.List;
 
 public class StreamRepartitionStrategy  implements Serializable {
     public StreamPartition partition ;
-public class StreamRepartitionStrategy {
-    public StreamPartition partition;
 
     public int numTotalParticipatingRouterBolts = 0;      // how many group-by bolts participate policy evaluation
     public int startSequence = 0;            // what is the sequence for the first bolt in this topology among all bolts

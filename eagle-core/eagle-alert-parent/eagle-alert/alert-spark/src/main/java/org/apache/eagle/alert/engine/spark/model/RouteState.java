@@ -49,16 +49,18 @@ public class RouteState implements Serializable {
 
     public RouteState(JavaStreamingContext jssc) {
         Accumulator<Map<Integer, Map<StreamPartition, List<StreamRoutePartitioner>>>> routePartitionerAccum = jssc.sparkContext().accumulator(new HashMap<>(), "routePartitionerAccum", new MapAccum());
-        Accumulator<Map<Integer, Map<StreamPartition, StreamRouterSpec>>> routeSpecMapAccum = jssc.sparkContext().accumulator(new HashMap<>(), "routeSpecAccum", new MapAccum());
-        Accumulator<Map<Integer, Map<StreamPartition, StreamSortSpec>>> cachedSSSAccm = jssc.sparkContext().accumulator(new HashMap<>(), "cachedSSSAccm", new MapAccum());
-        Accumulator<Map<Integer, Map<StreamPartition, StreamRouterSpec>>> cachedSRSAccm = jssc.sparkContext().accumulator(new HashMap<>(), "cachedSRSAccm", new MapAccum());
         this.routePartitionerAccum = routePartitionerAccum;
+        Accumulator<Map<Integer, Map<StreamPartition, StreamRouterSpec>>> routeSpecMapAccum = jssc.sparkContext().accumulator(new HashMap<>(), "routeSpecAccum", new MapAccum());
         this.routeSpecMapAccum = routeSpecMapAccum;
+        Accumulator<Map<Integer, Map<StreamPartition, StreamSortSpec>>> cachedSSSAccm = jssc.sparkContext().accumulator(new HashMap<>(), "cachedSSSAccm", new MapAccum());
         this.cachedSSSAccm = cachedSSSAccm;
+        Accumulator<Map<Integer, Map<StreamPartition, StreamRouterSpec>>> cachedSRSAccm = jssc.sparkContext().accumulator(new HashMap<>(), "cachedSRSAccm", new MapAccum());
         this.cachedSRSAccm = cachedSRSAccm;
+
     }
 
-    public RouteState(Accumulator<Map<Integer, Map<StreamPartition, List<StreamRoutePartitioner>>>> routePartitionerAccum, Accumulator<Map<Integer, Map<StreamPartition, StreamRouterSpec>>> routeSpecMapAccum) {
+    public RouteState(Accumulator<Map<Integer, Map<StreamPartition, List<StreamRoutePartitioner>>>> routePartitionerAccum,
+                      Accumulator<Map<Integer, Map<StreamPartition, StreamRouterSpec>>> routeSpecMapAccum) {
         this.routePartitionerAccum = routePartitionerAccum;
         this.routeSpecMapAccum = routeSpecMapAccum;
     }

@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCollector, Serializable {
-    private final static Logger LOG = LoggerFactory.getLogger(SparkStreamRouterBoltOutputCollector.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SparkStreamRouterBoltOutputCollector.class);
     private final List<Tuple2<Integer, PartitionedEvent>> outputCollector;
     private Map<StreamPartition, StreamRouterSpec> routeSpecMap;
     private Map<StreamPartition, List<StreamRoutePartitioner>> routePartitionerMap;

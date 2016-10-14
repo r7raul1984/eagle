@@ -41,8 +41,5 @@ public interface StreamTimeClockManager extends StreamTimeClockTrigger, Serializ
 
     Map<StreamTimeClockListener, String> getAllListenerStreamIdMap();
 
-    /**
-     * @param streamId
-     */
     void removeStreamTimeClock(String streamId);
 }
