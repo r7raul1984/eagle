@@ -17,16 +17,13 @@
 package org.apache.eagle.alert.coordination.model;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.ArrayList;
 import java.util.List;
 
-import org.codehaus.jackson.annotate.JsonIgnore;
-
-/**
- * @since Apr 29, 2016
- *
- */
 public class RouterSpec implements Serializable {
+public class RouterSpec {
     private String version;
     private String topologyName;
 

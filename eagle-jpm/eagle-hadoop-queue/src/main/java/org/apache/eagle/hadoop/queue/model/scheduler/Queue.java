@@ -21,204 +21,209 @@ package org.apache.eagle.hadoop.queue.model.scheduler;
 import org.codehaus.jackson.annotate.JsonIgnoreProperties;
 import org.codehaus.jackson.map.annotate.JsonSerialize;
 
-@JsonSerialize(include=JsonSerialize.Inclusion.NON_NULL)
+@JsonSerialize(include = JsonSerialize.Inclusion.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Queue {
-	private String type;
-	private double capacity;
-	private double usedCapacity;
-	private double maxCapacity;
-	private double absoluteCapacity;
-	private double absoluteMaxCapacity;
-	private double absoluteUsedCapacity;
+    //private String type;   workaround the YARN-4785,the field's value is based on the "type" field of SchedulerInfo.java, then its getter and setter function is never used.
+    private double capacity;
+    private double usedCapacity;
+    private double maxCapacity;
+    private double absoluteCapacity;
+    private double absoluteMaxCapacity;
+    private double absoluteUsedCapacity;
 
-	private ResourcesUsed resourcesUsed;
-	private String usedResources;
-	private String queueName;
-	private String state;
-	private Users users;
+    private ResourcesUsed resourcesUsed;
+    private String usedResources;
+    private String queueName;
+    private String state;
+    private Users users;
 
-	private int numApplications;
-	private int numPendingApplications;
-	private int numContainers;
-	private int maxApplications;
-	private int maxApplicationsPerUser;
-	private int maxActiveApplications;
-	private int maxActiveApplicationsPerUser;
-	private int userLimit;
-	private int userLimitFactor;
-	private Queues queues;
+    private int numApplications;
+    private int numPendingApplications;
+    private int numContainers;
+    private int maxApplications;
+    private int maxApplicationsPerUser;
+    private int maxActiveApplications;
+    private int maxActiveApplicationsPerUser;
+    private int userLimit;
+    private int userLimitFactor;
+    private Queues queues;
 
-	public String getUsedResources() {
-		return usedResources;
-	}
+    public String getUsedResources() {
+        return usedResources;
+    }
 
-	public void setUsedResources(String usedResources) {
-		this.usedResources = usedResources;
-	}
+    public void setUsedResources(String usedResources) {
+        this.usedResources = usedResources;
+    }
 
-	public int getMaxActiveApplicationsPerUser() {
-		return maxActiveApplicationsPerUser;
-	}
+    public int getMaxActiveApplicationsPerUser() {
+        return maxActiveApplicationsPerUser;
+    }
 
-	public void setMaxActiveApplicationsPerUser(int maxActiveApplicationsPerUser) {
-		this.maxActiveApplicationsPerUser = maxActiveApplicationsPerUser;
-	}
+    public void setMaxActiveApplicationsPerUser(int maxActiveApplicationsPerUser) {
+        this.maxActiveApplicationsPerUser = maxActiveApplicationsPerUser;
+    }
 
-	public int getNumPendingApplications() {
-		return numPendingApplications;
-	}
+    public int getNumPendingApplications() {
+        return numPendingApplications;
+    }
 
-	public void setNumPendingApplications(int numPendingApplications) {
-		this.numPendingApplications = numPendingApplications;
-	}
+    public void setNumPendingApplications(int numPendingApplications) {
+        this.numPendingApplications = numPendingApplications;
+    }
 
-	public int getNumContainers() {
-		return numContainers;
-	}
+    public int getNumContainers() {
+        return numContainers;
+    }
 
-	public void setNumContainers(int numContainers) {
-		this.numContainers = numContainers;
-	}
+    public void setNumContainers(int numContainers) {
+        this.numContainers = numContainers;
+    }
 
-	public int getMaxApplications() {
-		return maxApplications;
-	}
+    public int getMaxApplications() {
+        return maxApplications;
+    }
 
-	public void setMaxApplications(int maxApplications) {
-		this.maxApplications = maxApplications;
-	}
+    public void setMaxApplications(int maxApplications) {
+        this.maxApplications = maxApplications;
+    }
 
-	public int getMaxApplicationsPerUser() {
-		return maxApplicationsPerUser;
-	}
+    public int getMaxApplicationsPerUser() {
+        return maxApplicationsPerUser;
+    }
 
-	public void setMaxApplicationsPerUser(int maxApplicationsPerUser) {
-		this.maxApplicationsPerUser = maxApplicationsPerUser;
-	}
+    public void setMaxApplicationsPerUser(int maxApplicationsPerUser) {
+        this.maxApplicationsPerUser = maxApplicationsPerUser;
+    }
 
-	public int getMaxActiveApplications() {
-		return maxActiveApplications;
-	}
+    public int getMaxActiveApplications() {
+        return maxActiveApplications;
+    }
 
-	public void setMaxActiveApplications(int maxActiveApplications) {
-		this.maxActiveApplications = maxActiveApplications;
-	}
+    public void setMaxActiveApplications(int maxActiveApplications) {
+        this.maxActiveApplications = maxActiveApplications;
+    }
 
-	public int getUserLimit() {
-		return userLimit;
-	}
+    public int getUserLimit() {
+        return userLimit;
+    }
 
-	public void setUserLimit(int userLimit) {
-		this.userLimit = userLimit;
-	}
+    public void setUserLimit(int userLimit) {
+        this.userLimit = userLimit;
+    }
 
-	public int getUserLimitFactor() {
-		return userLimitFactor;
-	}
+    public int getUserLimitFactor() {
+        return userLimitFactor;
+    }
 
-	public void setUserLimitFactor(int userLimitFactor) {
-		this.userLimitFactor = userLimitFactor;
-	}
-
-
-	public String getType() {
-		return type;
-	}
-
-	public void setType(String type) {
-		this.type = type;
-	}
-	public ResourcesUsed getResourcesUsed() {
-		return resourcesUsed;
-	}
-
-	public void setResourcesUsed(ResourcesUsed resourcesUsed) {
-		this.resourcesUsed = resourcesUsed;
-	}
+    public void setUserLimitFactor(int userLimitFactor) {
+        this.userLimitFactor = userLimitFactor;
+    }
 
 
-	public Users getUsers() { return users; }
+    //    public String getType() {
+    //        return type;
+    //    }
+    //
+    //    public void setType(String type) {
+    //        this.type = type;
+    //    }
 
-	public void setUsers(Users users) { this.users = users; }
+    public ResourcesUsed getResourcesUsed() {
+        return resourcesUsed;
+    }
 
-	public double getAbsoluteUsedCapacity() {
-		return absoluteUsedCapacity;
-	}
+    public void setResourcesUsed(ResourcesUsed resourcesUsed) {
+        this.resourcesUsed = resourcesUsed;
+    }
 
-	public void setAbsoluteUsedCapacity(double absoluteUsedCapacity) {
-		this.absoluteUsedCapacity = absoluteUsedCapacity;
-	}
 
-	public double getCapacity() {
-		return capacity;
-	}
+    public Users getUsers() {
+        return users;
+    }
 
-	public void setCapacity(double capacity) {
-		this.capacity = capacity;
-	}
+    public void setUsers(Users users) {
+        this.users = users;
+    }
 
-	public double getUsedCapacity() {
-		return usedCapacity;
-	}
+    public double getAbsoluteUsedCapacity() {
+        return absoluteUsedCapacity;
+    }
 
-	public void setUsedCapacity(double usedCapacity) {
-		this.usedCapacity = usedCapacity;
-	}
+    public void setAbsoluteUsedCapacity(double absoluteUsedCapacity) {
+        this.absoluteUsedCapacity = absoluteUsedCapacity;
+    }
 
-	public double getMaxCapacity() {
-		return maxCapacity;
-	}
+    public double getCapacity() {
+        return capacity;
+    }
 
-	public void setMaxCapacity(double maxCapacity) {
-		this.maxCapacity = maxCapacity;
-	}
+    public void setCapacity(double capacity) {
+        this.capacity = capacity;
+    }
 
-	public double getAbsoluteCapacity() {
-		return absoluteCapacity;
-	}
+    public double getUsedCapacity() {
+        return usedCapacity;
+    }
 
-	public void setAbsoluteCapacity(double absoluteCapacity) {
-		this.absoluteCapacity = absoluteCapacity;
-	}
+    public void setUsedCapacity(double usedCapacity) {
+        this.usedCapacity = usedCapacity;
+    }
 
-	public double getAbsoluteMaxCapacity() {
-		return absoluteMaxCapacity;
-	}
+    public double getMaxCapacity() {
+        return maxCapacity;
+    }
 
-	public void setAbsoluteMaxCapacity(double absoluteMaxCapacity) {
-		this.absoluteMaxCapacity = absoluteMaxCapacity;
-	}
+    public void setMaxCapacity(double maxCapacity) {
+        this.maxCapacity = maxCapacity;
+    }
 
-	public int getNumApplications() {
-		return numApplications;
-	}
+    public double getAbsoluteCapacity() {
+        return absoluteCapacity;
+    }
 
-	public void setNumApplications(int numApplications) {
-		this.numApplications = numApplications;
-	}
+    public void setAbsoluteCapacity(double absoluteCapacity) {
+        this.absoluteCapacity = absoluteCapacity;
+    }
 
-	public String getQueueName() {
-		return queueName;
-	}
+    public double getAbsoluteMaxCapacity() {
+        return absoluteMaxCapacity;
+    }
 
-	public void setQueueName(String queueName) {
-		this.queueName = queueName;
-	}
+    public void setAbsoluteMaxCapacity(double absoluteMaxCapacity) {
+        this.absoluteMaxCapacity = absoluteMaxCapacity;
+    }
 
-	public String getState() {
-		return state;
-	}
+    public int getNumApplications() {
+        return numApplications;
+    }
 
-	public void setState(String state) {
-		this.state = state;
-	}
+    public void setNumApplications(int numApplications) {
+        this.numApplications = numApplications;
+    }
 
-	public Queues getQueues() {
-		return queues;
-	}
+    public String getQueueName() {
+        return queueName;
+    }
 
-	public void setQueues(Queues queues) {
-		this.queues = queues;
-	}	
+    public void setQueueName(String queueName) {
+        this.queueName = queueName;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public Queues getQueues() {
+        return queues;
+    }
+
+    public void setQueues(Queues queues) {
+        this.queues = queues;
+    }
 }

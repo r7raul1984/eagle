@@ -15,7 +15,8 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache</groupId>
@@ -30,7 +31,8 @@
     <url>https://eagle.incubator.apache.org</url>
     <inceptionYear>2015</inceptionYear>
     <description>
-        Apache Eagle is an open source monitoring solution to instantly identify access to sensitive data, recognize attacks, malicious activities in Hadoop and take actions in real time.
+        Apache Eagle is an open source monitoring solution to instantly identify access to sensitive data, recognize
+        attacks, malicious activities in Hadoop and take actions in real time.
     </description>
     <organization>
         <name>Apache Software Foundation</name>
@@ -125,16 +127,18 @@
     </developers>
     <modules>
         <module>eagle-core</module>
-        <module>eagle-webservice</module>
+        <!--<module>eagle-webservice</module>-->
         <module>eagle-security</module>
         <module>eagle-external</module>
-        <module>eagle-assembly</module>
+        <!--<module>eagle-assembly</module>-->
         <module>eagle-topology-assembly</module>
         <module>eagle-examples</module>
         <module>eagle-gc</module>
         <module>eagle-hadoop-metric</module>
         <module>eagle-server</module>
         <module>eagle-jpm</module>
+        <module>eagle-server-assembly</module>
+        <module>eagle-topology-check</module>
     </modules>
     <properties>
         <!-- General Properties -->
@@ -152,6 +156,7 @@
         <maven-source.version>3.0.0</maven-source.version>
         <maven-compiler.version>3.5.1</maven-compiler.version>
         <maven-dependency.version>2.10</maven-dependency.version>
+        <maven-exec.version>1.4.0</maven-exec.version>
         <maven-license.version>2.6</maven-license.version>
         <maven-surefire.version>2.6</maven-surefire.version>
         <maven-jar.version>2.6</maven-jar.version>
@@ -160,15 +165,19 @@
         <maven-tomcat7.version>2.2</maven-tomcat7.version>
         <maven-apache-rat.version>0.11</maven-apache-rat.version>
         <maven-failsafe.version>2.6</maven-failsafe.version>
+        <maven-checkstyle.version>2.17</maven-checkstyle.version>
+        <checkstyle.version>7.1</checkstyle.version>
 
         <!-- Environment Versions-->
+        <thrift.version>0.9.2</thrift.version>
         <hadoop.version>2.6.0.2.2.5.1-3</hadoop.version>
+        <hadoop.2.7.version>2.7.1.2.4.2.0-258</hadoop.2.7.version>
         <hbase.version>0.98.4.2.2.5.1-3-hadoop2</hbase.version>
         <hive.version>1.2.1</hive.version>
 
         <mapr-hive.version>1.2.0-mapr-1510</mapr-hive.version>
         <mapr-hadoop.version>2.7.0-mapr-1506</mapr-hadoop.version>
-        <maprfs.version>5.0.0-mapr</maprfs.version>
+        <maprfs.version>5.1.0-mapr</maprfs.version>
         <mapr-hbase.version>0.98.9-mapr-1503</mapr-hbase.version>
 
         <spark.core.version>2.0.0</spark.core.version>
@@ -192,6 +201,7 @@
         <commons-collections.version>3.2.1</commons-collections.version>
         <commons-io.version>2.4</commons-io.version>
         <guice.version>3.0</guice.version>
+        <httpclient.version>4.5.2</httpclient.version>
 
         <!-- Configuration -->
         <archaius.version>0.6.1</archaius.version>
@@ -233,18 +243,17 @@
         <storm-kafka.version>0.10.0</storm-kafka.version>
         <storm.version>0.9.3</storm.version>
 
-        <mapr-kafka.version>0.8.1.1</mapr-kafka.version>
+        <mapr-kafka.version>0.9.0.0-mapr-1607</mapr-kafka.version>
         <mapr-kafka-clients.version>0.8.3-mapr-1509</mapr-kafka-clients.version>
         <mapr-storm-kafka.version>0.9.3</mapr-storm-kafka.version>
         <mapr-storm.version>0.9.3-mapr-1509</mapr-storm.version>
 
-        <curator.version>2.8.0</curator.version>
+        <curator.version>2.5.0</curator.version>
         <curator.test.version>2.5.0</curator.test.version>
         <zkclient.version>0.3</zkclient.version>
 
         <!-- Query -->
         <tomcat.version>7.0.42</tomcat.version>
-        <protobuf-java.version>2.6.1</protobuf-java.version>
         <antlr4.version>4.5</antlr4.version>
         <groovy.version>2.3.4</groovy.version>
         <parsii.version>1.3</parsii.version>
@@ -255,7 +264,7 @@
         <mysql-connector-java.version>5.1.34</mysql-connector-java.version>
         <ddlutils.version>1.0</ddlutils.version>
         <torque.version>4.0</torque.version>
-        <!--<derby.version>10.1.3.1</derby.version>-->
+        <derby.version>10.1.3.1</derby.version>
         <derby.version>10.10.2.0</derby.version>
 
         <!-- REST Service-->
@@ -273,12 +282,12 @@
         <javax.mail.version>1.4</javax.mail.version>
         <extcos4.version>0.4b</extcos4.version>
         <extcos3.version>0.3b</extcos3.version>
-        <siddhi.version>3.0.5</siddhi.version>
+        <siddhi.version>3.1.1</siddhi.version>
 
         <!-- Testing -->
         <junit.version>4.12</junit.version>
         <junit-benchmarks.version>0.7.0</junit-benchmarks.version>
-        <h2.version>1.3.172</h2.version>
+        <h2.version>1.4.192</h2.version>
         <scalatest.version>2.2.4</scalatest.version>
         <mockito.version>1.8.1-rc1</mockito.version>
         <tomcat.embed.version>7.0.55</tomcat.embed.version>
@@ -298,9 +307,11 @@
         <metrics-elasticsearch-reporter.version>2.2.0</metrics-elasticsearch-reporter.version>
 
         <common.cli.version>1.3.1</common.cli.version>
+        <ullink.slack.version>0.6.0</ullink.slack.version>
 
         <!-- dropwizard -->
         <dropwizard.version>0.7.1</dropwizard.version>
+        <dropwizard-guice.version>0.7.0.2</dropwizard-guice.version>
     </properties>
 
     <dependencyManagement>
@@ -397,6 +408,16 @@
                 <artifactId>guice</artifactId>
                 <version>${guice.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.mapr.hadoop</groupId>
+                <artifactId>maprfs</artifactId>
+                <version>${maprfs.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
 
             <!-- Configuration -->
             <dependency>
@@ -486,14 +507,14 @@
                 <scope>compile</scope>
             </dependency>
             <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-mapper-asl</artifactId>
-                <version>${codehaus-jackson.version}</version>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-json-provider</artifactId>
+                <version>${fasterxml-jackson.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-core-asl</artifactId>
-                <version>${codehaus-jackson.version}</version>
+                <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                <artifactId>jackson-jaxrs-base</artifactId>
+                <version>${fasterxml-jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
@@ -504,16 +525,6 @@
                 <groupId>org.json</groupId>
                 <artifactId>json</artifactId>
                 <version>${org.json.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-jaxrs</artifactId>
-                <version>${codehaus-jackson.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.codehaus.jackson</groupId>
-                <artifactId>jackson-xc</artifactId>
-                <version>${codehaus-jackson.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.google.code.gson</groupId>
@@ -538,6 +549,11 @@
                 <groupId>org.jgrapht</groupId>
                 <artifactId>jgrapht-core</artifactId>
                 <version>${jgrapht.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>kafka_${scala.version}</artifactId>
+                <version>${kafka.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.kafka</groupId>
@@ -710,7 +726,6 @@
                 <groupId>com.h2database</groupId>
                 <artifactId>h2</artifactId>
                 <version>${h2.version}</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.scalatest</groupId>
@@ -818,6 +833,21 @@
                         <artifactId>slf4j-log4j12</artifactId>
                     </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-assets</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.dropwizard</groupId>
+                <artifactId>dropwizard-testing</artifactId>
+                <version>${dropwizard.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hubspot.dropwizard</groupId>
+                <artifactId>dropwizard-guice</artifactId>
+                <version>${dropwizard-guice.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.swagger</groupId>
@@ -939,15 +969,16 @@
 
         <profile>
             <id>mapr</id>
-            <!--<activation>-->
-                <!--<activeByDefault>true</activeByDefault>-->
-            <!--</activation>-->
             <repositories>
                 <repository>
                     <id>mapr-releases</id>
                     <url>http://repository.mapr.com/maven/</url>
-                    <snapshots><enabled>false</enabled></snapshots>
-                    <releases><enabled>true</enabled></releases>
+                    <snapshots>
+                        <enabled>false</enabled>
+                    </snapshots>
+                    <releases>
+                        <enabled>true</enabled>
+                    </releases>
                 </repository>
             </repositories>
             <dependencyManagement>
@@ -961,11 +992,6 @@
                         <groupId>org.apache.hbase</groupId>
                         <artifactId>hbase-client</artifactId>
                         <version>${mapr-hbase.version}</version>
-                    </dependency>
-                    <dependency>
-                        <groupId>com.mapr.hadoop</groupId>
-                        <artifactId>maprfs</artifactId>
-                        <version>${maprfs.version}</version>
                     </dependency>
                     <dependency>
                         <groupId>org.apache.hadoop</groupId>
@@ -998,11 +1024,6 @@
                         <version>${mapr-hive.version}</version>
                     </dependency>
 
-                    <dependency>
-                        <groupId>org.apache.kafka</groupId>
-                        <artifactId>kafka_${scala.version}</artifactId>
-                        <version>${mapr-kafka.version}</version>
-                    </dependency>
                     <dependency>
                         <groupId>org.apache.storm</groupId>
                         <artifactId>storm-kafka</artifactId>
@@ -1090,6 +1111,11 @@
                     <version>${maven-assembly.version}</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>${maven-exec.version}</version>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
                     <version>${maven-dependency.version}</version>
@@ -1107,6 +1133,40 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <!-- Checkstyle -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>${maven-checkstyle.version}</version>
+                <configuration>
+                    <configLocation>eagle-dev/checkstyle.xml</configLocation>
+                    <suppressionsLocation>eagle-dev/checkstyle-suppressions.xml</suppressionsLocation>
+                    <suppressionsFileExpression>checkstyle.suppressions.file</suppressionsFileExpression>
+                    <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                    <encoding>UTF-8</encoding>
+                    <consoleOutput>false</consoleOutput>
+                    <failOnViolation>false</failOnViolation>
+                    <failsOnError>false</failsOnError>
+                    <violationSeverity>warning</violationSeverity>
+                    <excludes>**/generated/**/*</excludes>
+                </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>${checkstyle.version}</version>
+                    </dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>checkstyle</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
@@ -1145,6 +1205,7 @@
                                 <exclude>README*</exclude>
                                 <exclude>**/*.log</exclude>
                                 <exclude>**/*.out</exclude>
+                                <exclude>**/*.db</exclude>
                                 <exclude>**/eagle.log*</exclude>
                                 <exclude>**/velocity.log*</exclude>
                                 <!-- all json files should be excluded -->
@@ -1170,67 +1231,68 @@
                                 <!-- External dependency script -->
                                 <exclude>**/resource/serf/etc/ambari.json</exclude>
 
-                                <!-- TODO: fix it -->
                                 <exclude>**/webapp/**</exclude>
-
+                                <exclude>**/*.pid</exclude>
                             </excludes>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <repositories>
         <repository>
-            <id>Maven Repo1 Repository</id>
+            <id>maven.repo1</id>
+            <name>Maven Repo1 Repository</name>
             <url>http://repo1.maven.org/maven2</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
         </repository>
         <repository>
-            <id>cloudera</id>
-            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
+            <id>hortonworks.public</id>
+            <name>HDP Public Repository</name>
+            <url>http://repo.hortonworks.com/content/groups/public/</url>
         </repository>
         <repository>
-            <id>siddhi cep engine</id>
-            <url>http://maven.wso2.org/nexus/content/groups/wso2-public</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-        </repository>
-        <repository>
-            <id>scala-tools.org</id>
-            <name>Scala-Tools Maven2 Repository</name>
-            <url>http://scala-tools.org/repo-releases</url>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-        </repository>
-        <repository>
-            <id>HDP Release Repository</id>
-            <url>http://repo.hortonworks.com/content/repositories/releases/</url>
-        </repository>
-        <repository>
-            <id>HDP Central Repository</id>
+            <id>hortonworks.central</id>
+            <name>HDP Central Repository</name>
             <url>http://repo.hortonworks.com/content/repositories/central/</url>
         </repository>
         <repository>
-            <id>WSO2 Public</id>
+            <id>hortonworks.release</id>
+            <name>HDP Release Repository</name>
+            <url>http://repo.hortonworks.com/content/repositories/releases/</url>
+        </repository>
+        <repository>
+            <id>wso2.public</id>
+            <name>WSO2 Public</name>
             <url>http://maven.wso2.org/nexus/content/groups/wso2-public</url>
+        </repository>
+        <repository>
+            <id>scale-tools.release</id>
+            <name>Scala-Tools Release Repository</name>
+            <url>http://scala-tools.org/repo-releases</url>
+        </repository>
+        <repository>
+            <id>cloudera.repo</id>
+            <name>Cloudera Repository</name>
+            <url>https://repository.cloudera.com/artifactory/cloudera-repos/</url>
+        </repository>
+        <repository>
+            <id>mapr.repo</id>
+            <name>MapR Repository</name>
+            <url>http://repository.mapr.com/maven/</url>
         </repository>
     </repositories>
     <pluginRepositories>
         <pluginRepository>
-            <id>scala-tools-maven2-repository</id>
-            <name>Scala-Tools Maven2 Repository</name>
+            <id>scala-tools.release</id>
+            <name>Scala-Tools Release Repository</name>
             <url>http://scala-tools.org/repo-releases</url>
         </pluginRepository>
     </pluginRepositories>

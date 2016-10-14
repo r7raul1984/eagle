@@ -25,14 +25,14 @@ import com.typesafe.config.Config;
  * Since 4/28/16.
  */
 public class ZKConfigBuilder {
-    public static ZKConfig getZKConfig(Config config){
+    public static ZKConfig getZKConfig(Config config) {
         ZKConfig zkConfig = new ZKConfig();
         zkConfig.zkQuorum = config.getString("zkConfig.zkQuorum");
         zkConfig.zkRoot = config.getString("zkConfig.zkRoot");
-        zkConfig.zkSessionTimeoutMs = config.getInt("zkConfig.zkSessionTimeoutMs");
-        zkConfig.connectionTimeoutMs = config.getInt("zkConfig.connectionTimeoutMs");
-        zkConfig.zkRetryTimes = config.getInt("zkConfig.zkRetryTimes");
-        zkConfig.zkRetryInterval = config.getInt("zkConfig.zkRetryInterval");
+        zkConfig.zkSessionTimeoutMs = config.hasPath("zkConfig.zkSessionTimeoutMs") ? config.getInt("zkConfig.zkSessionTimeoutMs") : 10000;
+        zkConfig.connectionTimeoutMs = config.hasPath("zkConfig.connectionTimeoutMs") ? config.getInt("zkConfig.connectionTimeoutMs") : 10000;
+        zkConfig.zkRetryTimes = config.hasPath("zkConfig.zkRetryTimes") ? config.getInt("zkConfig.zkRetryTimes") : 3;
+        zkConfig.zkRetryInterval = config.hasPath("zkConfig.zkRetryInterval") ? config.getInt("zkConfig.zkRetryInterval") : 3000;
         return zkConfig;
     }
 }

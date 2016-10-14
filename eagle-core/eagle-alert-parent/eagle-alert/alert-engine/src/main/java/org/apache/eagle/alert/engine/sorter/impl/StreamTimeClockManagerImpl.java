@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -16,12 +16,6 @@
  */
 package org.apache.eagle.alert.engine.sorter.impl;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.eagle.alert.engine.sorter.StreamTimeClock;
 import org.apache.eagle.alert.engine.sorter.StreamTimeClockListener;
 import org.apache.eagle.alert.engine.sorter.StreamTimeClockManager;
@@ -29,14 +23,20 @@ import org.apache.eagle.alert.utils.DateTimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public final class StreamTimeClockManagerImpl implements StreamTimeClockManager {
     private static final long serialVersionUID = -2770823821511195343L;
-    private final static Logger LOG = LoggerFactory.getLogger(StreamTimeClockManagerImpl.class);
-    private final Map<String,StreamTimeClock> streamIdTimeClockMap;
+    private static final Logger LOG = LoggerFactory.getLogger(StreamTimeClockManagerImpl.class);
+    private final Map<String, StreamTimeClock> streamIdTimeClockMap;
     private Timer timer;
 
-    private final Map<StreamTimeClockListener,String> listenerStreamIdMap;
-    private final static AtomicInteger num = new AtomicInteger();
+    private final Map<StreamTimeClockListener, String> listenerStreamIdMap;
+    private static final AtomicInteger num = new AtomicInteger();
 
     public StreamTimeClockManagerImpl() {
         this(new HashMap<>(), new HashMap<>());
@@ -60,30 +60,25 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
     /**
      * By default, we could keep the current time clock in memory,
      * Eventually we may need to consider the global time synchronization across all nodes
-     *
      * 1) When to initialize window according to start time
      * 2) When to close expired window according to current time
      *
-     * @return StreamTimeClock instance
+     * @return StreamTimeClock instance.
      */
     @Override
-    public StreamTimeClock createStreamTimeClock(String streamId){
+    public StreamTimeClock createStreamTimeClock(String streamId) {
         synchronized (streamIdTimeClockMap) {
             if (!streamIdTimeClockMap.containsKey(streamId)) {
                 StreamTimeClock instance = new StreamTimeClockInLocalMemory(streamId);
                 LOG.info("Created {}", instance);
                 streamIdTimeClockMap.put(streamId, instance);
             } else {
-                LOG.warn("TimeClock for stream already existss: "+streamIdTimeClockMap.get(streamId));
+                LOG.warn("TimeClock for stream already existss: " + streamIdTimeClockMap.get(streamId));
             }
             return streamIdTimeClockMap.get(streamId);
         }
     }
 
-    /**
-     * @param streamId
-     * @return
-     */
     @Override
     public StreamTimeClock getStreamTimeClock(String streamId) {
         synchronized (streamIdTimeClockMap) {
@@ -109,7 +104,7 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
      * @param streamId
      */
     @Override
-    public void removeStreamTimeClock(String streamId){
+    public void removeStreamTimeClock(String streamId) {
         synchronized (streamIdTimeClockMap) {
             if (streamIdTimeClockMap.containsKey(streamId)) {
                 streamIdTimeClockMap.remove(streamId);
@@ -121,10 +116,11 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
     }
 
     @Override
-    public void registerListener(String streamId,StreamTimeClockListener listener) {
+    public void registerListener(String streamId, StreamTimeClockListener listener) {
         synchronized (listenerStreamIdMap) {
-            if (listenerStreamIdMap.containsKey(listener))
+            if (listenerStreamIdMap.containsKey(listener)) {
                 throw new IllegalArgumentException("Duplicated listener: " + listener.toString());
+            }
             LOG.info("Register {} on {}", listener, streamId);
             listenerStreamIdMap.put(listener, streamId);
         }
@@ -132,7 +128,7 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
 
     @Override
     public void registerListener(StreamTimeClock streamClock, StreamTimeClockListener listener) {
-        registerListener(streamClock.getStreamId(),listener);
+        registerListener(streamClock.getStreamId(), listener);
     }
 
     @Override
@@ -149,27 +145,32 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
                 count++;
             }
         }
-        if (LOG.isDebugEnabled()) LOG.debug("Triggered {} time-clock listeners on stream {}", count, streamId);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Triggered {} time-clock listeners on stream {}", count, streamId);
+        }
     }
 
-    private static long getCurrentSystemTime(){
+    private static long getCurrentSystemTime() {
         return System.currentTimeMillis();
     }
 
     @Override
     public void onTimeUpdate(String streamId, long timestamp) {
         StreamTimeClock timeClock = getStreamTimeClock(streamId);
-        if(timeClock == null)
+        if (timeClock == null) {
             return;
+        }
         // Trigger time clock only when time moves forward
-        if(timestamp >= timeClock.getTime()) {
+        if (timestamp >= timeClock.getTime()) {
             timeClock.moveForward(timestamp);
-            if(LOG.isDebugEnabled()) LOG.debug("Tick on stream {} with latest time {}",streamId, DateTimeUtil.millisecondsToHumanDateWithMilliseconds(timeClock.getTime()));
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Tick on stream {} with latest time {}", streamId, DateTimeUtil.millisecondsToHumanDateWithMilliseconds(timeClock.getTime()));
+            }
             triggerTickOn(streamId);
         }
     }
 
-    private void triggerTickOnAll(){
+    private void triggerTickOnAll() {
         synchronized (listenerStreamIdMap) {
             for (Map.Entry<StreamTimeClockListener, String> entry : listenerStreamIdMap.entrySet()) {
                 triggerTickOn(entry.getValue());
@@ -181,6 +182,6 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
     public void close() {
         timer.cancel();
         triggerTickOnAll();
-        LOG.info("Closed StreamTimeClockManager {}",this);
+        LOG.info("Closed StreamTimeClockManager {}", this);
     }
 }

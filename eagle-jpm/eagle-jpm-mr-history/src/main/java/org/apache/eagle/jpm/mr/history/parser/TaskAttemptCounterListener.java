@@ -18,10 +18,11 @@
 
 package org.apache.eagle.jpm.mr.history.parser;
 
-import org.apache.eagle.jpm.mr.history.common.JHFConfigManager;
-import org.apache.eagle.jpm.mr.history.entities.JobBaseAPIEntity;
-import org.apache.eagle.jpm.mr.history.entities.TaskAttemptCounterAPIEntity;
-import org.apache.eagle.jpm.mr.history.entities.TaskAttemptExecutionAPIEntity;
+import org.apache.eagle.jpm.mr.history.MRHistoryJobConfig;
+import org.apache.eagle.jpm.mr.historyentity.JobBaseAPIEntity;
+import org.apache.eagle.jpm.mr.historyentity.TaskAttemptCounterAPIEntity;
+import org.apache.eagle.jpm.mr.historyentity.TaskAttemptExecutionAPIEntity;
+import org.apache.eagle.jpm.util.MRJobTagName;
 import org.apache.eagle.service.client.IEagleServiceClient;
 import org.apache.eagle.service.client.impl.EagleServiceClientImpl;
 import org.slf4j.Logger;
@@ -33,72 +34,72 @@ public class TaskAttemptCounterListener implements HistoryJobEntityCreationListe
     private static final Logger logger = LoggerFactory.getLogger(TaskAttemptCounterListener.class);
     private static final int BATCH_SIZE = 1000;
     private Map<CounterKey, CounterValue> counters = new HashMap<>();
-    private JHFConfigManager configManager;
 
-    public TaskAttemptCounterListener(JHFConfigManager configManager) {
-        this.configManager = configManager;
+    public TaskAttemptCounterListener() {
     }
 
     private static class CounterKey {
         Map<String, String> tags = new HashMap<>();
         long timestamp;
-        
+
         @Override
         public boolean equals(Object thatKey) {
-            if (!(thatKey instanceof CounterKey))
+            if (!(thatKey instanceof CounterKey)) {
                 return false;
-            CounterKey that = (CounterKey)thatKey;
-            if (that.tags.equals(this.tags) && that.timestamp == this.timestamp)
+            }
+            CounterKey that = (CounterKey) thatKey;
+            if (that.tags.equals(this.tags) && that.timestamp == this.timestamp) {
                 return true;
+            }
             return false;
         }
-        
+
         @Override
-        public int hashCode(){
+        public int hashCode() {
             return tags.hashCode() ^ Long.valueOf(timestamp).hashCode();
         }
     }
-    
+
     private static class CounterValue {
         int totalCount;
         int failedCount;
         int killedCount;
     }
-    
+
     @Override
     public void jobEntityCreated(JobBaseAPIEntity entity) throws Exception {
         if (!(entity instanceof TaskAttemptExecutionAPIEntity)) {
             return;
         }
-        
-        TaskAttemptExecutionAPIEntity e = (TaskAttemptExecutionAPIEntity)entity;
-        
+
+        TaskAttemptExecutionAPIEntity e = (TaskAttemptExecutionAPIEntity) entity;
+
         Map<String, String> tags = new HashMap<>();
-        tags.put(EagleJobTagName.SITE.toString(), e.getTags().get(EagleJobTagName.SITE.toString()));
-        tags.put(EagleJobTagName.NORM_JOB_NAME.toString(), e.getTags().get(EagleJobTagName.NORM_JOB_NAME.toString()));
-        tags.put(EagleJobTagName.RACK.toString(), e.getTags().get(EagleJobTagName.RACK.toString()));
-        tags.put(EagleJobTagName.HOSTNAME.toString(), e.getTags().get(EagleJobTagName.HOSTNAME.toString()));
-        tags.put(EagleJobTagName.JOB_ID.toString(), e.getTags().get(EagleJobTagName.JOB_ID.toString()));
-        tags.put(EagleJobTagName.TASK_TYPE.toString(), e.getTags().get(EagleJobTagName.TASK_TYPE.toString()));
+        tags.put(MRJobTagName.SITE.toString(), e.getTags().get(MRJobTagName.SITE.toString()));
+        tags.put(MRJobTagName.JOD_DEF_ID.toString(), e.getTags().get(MRJobTagName.JOD_DEF_ID.toString()));
+        tags.put(MRJobTagName.RACK.toString(), e.getTags().get(MRJobTagName.RACK.toString()));
+        tags.put(MRJobTagName.HOSTNAME.toString(), e.getTags().get(MRJobTagName.HOSTNAME.toString()));
+        tags.put(MRJobTagName.JOB_ID.toString(), e.getTags().get(MRJobTagName.JOB_ID.toString()));
+        tags.put(MRJobTagName.TASK_TYPE.toString(), e.getTags().get(MRJobTagName.TASK_TYPE.toString()));
 
         CounterKey key = new CounterKey();
         key.tags = tags;
         key.timestamp = roundToMinute(e.getEndTime());
-        
+
         CounterValue value = counters.get(key);
         if (value == null) {
             value = new CounterValue();
             counters.put(key, value);
         }
-        
+
         if (e.getTaskStatus().equals(EagleTaskStatus.FAILED.name())) {
             value.failedCount++;
-        } else if(e.getTaskStatus().equals(EagleTaskStatus.KILLED.name())) {
+        } else if (e.getTaskStatus().equals(EagleTaskStatus.KILLED.name())) {
             value.killedCount++;
         }
         value.totalCount++;
     }
-    
+
     private long roundToMinute(long timestamp) {
         GregorianCalendar cal = new GregorianCalendar();
         cal.setTimeInMillis(timestamp);
@@ -106,18 +107,16 @@ public class TaskAttemptCounterListener implements HistoryJobEntityCreationListe
         cal.set(Calendar.MILLISECOND, 0);
         return cal.getTimeInMillis();
     }
-    
+
     @Override
     public void flush() throws Exception {
-        JHFConfigManager.EagleServiceConfig eagleServiceConfig = configManager.getEagleServiceConfig();
-        JHFConfigManager.JobExtractorConfig jobExtractorConfig = configManager.getJobExtractorConfig();
         IEagleServiceClient client = new EagleServiceClientImpl(
-                eagleServiceConfig.eagleServiceHost,
-                eagleServiceConfig.eagleServicePort,
-                eagleServiceConfig.username,
-                eagleServiceConfig.password);
+            MRHistoryJobConfig.get().getEagleServiceConfig().eagleServiceHost,
+            MRHistoryJobConfig.get().getEagleServiceConfig().eagleServicePort,
+            MRHistoryJobConfig.get().getEagleServiceConfig().username,
+            MRHistoryJobConfig.get().getEagleServiceConfig().password);
 
-        client.getJerseyClient().setReadTimeout(jobExtractorConfig.readTimeoutSeconds * 1000);
+        client.getJerseyClient().setReadTimeout(MRHistoryJobConfig.get().getJobExtractorConfig().readTimeoutSeconds * 1000);
         List<TaskAttemptCounterAPIEntity> list = new ArrayList<>();
         logger.info("start flushing TaskAttemptCounter entities of total number " + counters.size());
         // create entity
@@ -131,7 +130,7 @@ public class TaskAttemptCounterListener implements HistoryJobEntityCreationListe
             entity.setFailedCount(value.failedCount);
             entity.setKilledCount(value.killedCount);
             list.add(entity);
-            
+
             if (list.size() >= BATCH_SIZE) {
                 logger.info("start flushing TaskAttemptCounter " + list.size());
                 client.create(list);

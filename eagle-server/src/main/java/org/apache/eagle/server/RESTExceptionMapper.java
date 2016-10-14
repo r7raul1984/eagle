@@ -16,23 +16,22 @@
  */
 package org.apache.eagle.server;
 
-import io.dropwizard.jersey.errors.LoggingExceptionMapper;
-import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.eagle.metadata.resource.RESTResponse;
+import io.dropwizard.jersey.errors.LoggingExceptionMapper;
 
+import java.util.concurrent.ThreadLocalRandom;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.concurrent.ThreadLocalRandom;
 
 public class RESTExceptionMapper extends LoggingExceptionMapper<Throwable> {
     @Override
     public Response toResponse(Throwable throwable) {
+        final long id = ThreadLocalRandom.current().nextLong();
+        logException(id, throwable);
         if (throwable instanceof WebApplicationException) {
             return ((WebApplicationException) throwable).getResponse();
         }
-        final long id = ThreadLocalRandom.current().nextLong();
-        logException(id, throwable);
-       return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new RESTResponse<>(throwable)).type(MediaType.APPLICATION_JSON_TYPE).build();
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(new RESTResponse<>(throwable)).type(MediaType.APPLICATION_JSON_TYPE).build();
     }
 }

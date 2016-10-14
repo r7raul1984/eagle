@@ -16,9 +16,10 @@
  */
 package org.apache.eagle.service.hbase;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Test;
 import org.junit.Ignore;
+import org.junit.Test;
 
 @Ignore
 public class TestHBaseBase {
@@ -29,10 +30,10 @@ public class TestHBaseBase {
         hbase = EmbeddedHbase.getInstance();
     }
 
-    @Test
-    @Ignore(value="get rid of false failures")
-    public void test() {
-
+    @AfterClass
+    public static void shutdownHBase() {
+        if (hbase != null) {
+            hbase.shutdown();
+        }
     }
-
 }

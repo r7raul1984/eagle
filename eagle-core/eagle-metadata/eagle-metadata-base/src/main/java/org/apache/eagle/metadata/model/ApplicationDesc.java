@@ -22,7 +22,7 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * Static metadata provided by installed apps
+ * Static metadata provided by installed apps.
  */
 public class ApplicationDesc implements Serializable {
     private String type;
@@ -35,8 +35,18 @@ public class ApplicationDesc implements Serializable {
     private Class<?> providerClass;
     private Configuration configuration;
     private List<StreamDefinition> streams;
-//    private Class<?> sinkClass;
     private ApplicationDocs docs;
+    private boolean executable;
+
+    public boolean isExecutable() {
+        return executable;
+    }
+
+    public void setExecutable(boolean executable) {
+        this.executable = executable;
+    }
+
+    private List<ApplicationDependency> dependencies;
 
     public String getDescription() {
         return description;
@@ -48,6 +58,10 @@ public class ApplicationDesc implements Serializable {
 
     public String getType() {
         return type;
+    }
+
+    public String getJarPath() {
+        return jarPath;
     }
 
     public Configuration getConfiguration() {
@@ -62,12 +76,12 @@ public class ApplicationDesc implements Serializable {
         return viewPath;
     }
 
-    public String getJarPath() {
-        return jarPath;
-    }
-
     public void setType(String type) {
         this.type = type;
+    }
+
+    public void setJarPath(String jarPath) {
+        this.jarPath = jarPath;
     }
 
     public void setName(String name) {
@@ -80,9 +94,6 @@ public class ApplicationDesc implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-    public void setJarPath(String jarPath) {
-        this.jarPath = jarPath;
     }
 
     public void setViewPath(String viewPath) {
@@ -107,21 +118,13 @@ public class ApplicationDesc implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("ApplicationDesc [type=%s, name=%s, version=%s, appClass=%s, viewPath=%s, jarPath=%s, providerClass=%s, configuration= %s properties, description=%s",
-                    getType(),getName(),getVersion(),getAppClass(), getViewPath(),getJarPath(),getProviderClass(), getConfiguration() == null ? 0: getConfiguration().size(),getDescription());
+        return String.format("ApplicationDesc [type=%s, name=%s, version=%s, appClass=%s, viewPath=%s, jarpath=%s, providerClass=%s, configuration= %s properties, description=%s",
+            getType(), getName(), getVersion(), getAppClass(), getViewPath(),getJarPath(), getProviderClass(), getConfiguration() == null ? 0 : getConfiguration().size(), getDescription());
     }
 
     public void setConfiguration(Configuration configuration) {
         this.configuration = configuration;
     }
-
-//    public Class<?> getSinkType() {
-//        return sinkClass;
-//    }
-//
-//    public void setSinkClass(Class<?> sinkClass) {
-//        this.sinkClass = sinkClass;
-//    }
 
     public List<StreamDefinition> getStreams() {
         return streams;
@@ -137,5 +140,13 @@ public class ApplicationDesc implements Serializable {
 
     public void setDocs(ApplicationDocs docs) {
         this.docs = docs;
+    }
+
+    public List<ApplicationDependency> getDependencies() {
+        return dependencies;
+    }
+
+    public void setDependencies(List<ApplicationDependency> dependencies) {
+        this.dependencies = dependencies;
     }
 }

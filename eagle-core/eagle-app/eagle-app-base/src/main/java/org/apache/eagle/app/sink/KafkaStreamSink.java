@@ -17,60 +17,86 @@
 package org.apache.eagle.app.sink;
 
 import backtype.storm.task.TopologyContext;
-import org.apache.eagle.alert.engine.model.StreamEvent;
-import org.apache.eagle.app.Configuration;
+import backtype.storm.topology.BasicOutputCollector;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.typesafe.config.Config;
+import kafka.javaapi.producer.Producer;
+import kafka.producer.KeyedMessage;
+import kafka.producer.ProducerConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Properties;
 
 public class KafkaStreamSink extends StormStreamSink<KafkaStreamSinkConfig> {
-    private final static Logger LOGGER = LoggerFactory.getLogger(KafkaStreamSink.class);
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaStreamSink.class);
     private String topicId;
+    private Producer producer;
+    private KafkaStreamSinkConfig config;
 
     @Override
     public void init(String streamId, KafkaStreamSinkConfig config) {
         super.init(streamId, config);
         this.topicId = config.getTopicId();
+        this.config = config;
     }
 
     @Override
     public void prepare(Map stormConf, TopologyContext context) {
         super.prepare(stormConf, context);
-        // TODO: Create KafkaProducer
+        Properties properties = new Properties();
+        properties.put("metadata.broker.list", config.getBrokerList());
+        properties.put("serializer.class", config.getSerializerClass());
+        properties.put("key.serializer.class", config.getKeySerializerClass());
+        ProducerConfig producerConfig = new ProducerConfig(properties);
+        producer = new Producer(producerConfig);
     }
 
     @Override
-    protected void onEvent(StreamEvent streamEvent) {
-        LOGGER.info("TODO: producing {} to '{}'",streamEvent,topicId);
+    protected void execute(Object key, Map event, BasicOutputCollector collector) {
+        try {
+            String output = new ObjectMapper().writeValueAsString(event);
+            producer.send(new KeyedMessage(this.topicId, key, output));
+        } catch (Exception ex) {
+            LOG.error(ex.getMessage(), ex);
+            collector.reportError(ex);
+        }
     }
 
     @Override
-    public void onInstall() {
+    public void afterInstall() {
         ensureTopicCreated();
     }
 
-    private void ensureTopicCreated(){
-        LOGGER.info("TODO: ensure kafka topic {} created",this.topicId);
+    private void ensureTopicCreated() {
+        LOG.info("TODO: ensure kafka topic {} created", this.topicId);
     }
 
-    private void ensureTopicDeleted(){
-        LOGGER.info("TODO: ensure kafka topic {} deleted",this.topicId);
+    private void ensureTopicDeleted() {
+        LOG.info("TODO: ensure kafka topic {} deleted", this.topicId);
     }
 
     @Override
-    public void onUninstall() {
+    public void cleanup() {
+        if (this.producer != null) {
+            this.producer.close();
+        }
+    }
+
+    @Override
+    public void afterUninstall() {
         ensureTopicDeleted();
     }
 
-    public static class Provider implements StreamSinkProvider<KafkaStreamSink,KafkaStreamSinkConfig> {
+    public static class Provider implements StreamSinkProvider<KafkaStreamSink, KafkaStreamSinkConfig> {
         @Override
-        public KafkaStreamSinkConfig getSinkConfig(String streamId, Configuration appConfig) {
-            String topicId = String.format("EAGLE.%s.%s",
-                    appConfig.getSiteId(),
-                    streamId).toLowerCase();
+        public KafkaStreamSinkConfig getSinkConfig(String streamId, Config config) {
             KafkaStreamSinkConfig desc = new KafkaStreamSinkConfig();
-            desc.setTopicId(topicId);
+            desc.setTopicId(config.getString("dataSinkConfig.topic"));
+            desc.setBrokerList(config.getString("dataSinkConfig.brokerList"));
+            desc.setSerializerClass(config.getString("dataSinkConfig.serializerClass"));
+            desc.setKeySerializerClass(config.getString("dataSinkConfig.keySerializerClass"));
             return desc;
         }
 

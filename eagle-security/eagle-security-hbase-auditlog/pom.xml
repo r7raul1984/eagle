@@ -18,7 +18,8 @@
   ~  */
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <artifactId>eagle-security-parent</artifactId>
         <groupId>org.apache.eagle</groupId>
@@ -36,7 +37,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.eagle</groupId>
-            <artifactId>eagle-stream-application-manager</artifactId>
+            <artifactId>eagle-app-base</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

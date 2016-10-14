@@ -30,26 +30,28 @@ import java.net.URLClassLoader;
 import java.util.ServiceLoader;
 import java.util.function.Function;
 
-public class ApplicationProviderSPILoader extends ApplicationProviderLoader{
+/**
+ * Load Application Provider with SPI, by default from current class loader.
+ */
+public class ApplicationProviderSPILoader extends ApplicationProviderLoader {
     private final String appProviderExtDir;
-    private final static Logger LOG = LoggerFactory.getLogger(ApplicationProviderSPILoader.class);
-    private final static String APPLICATIONS_DIR_PROPS_KEY = "application.provider.dir";
+    private static final Logger LOG = LoggerFactory.getLogger(ApplicationProviderSPILoader.class);
+    private static final String APPLICATIONS_DIR_PROPS_KEY = "application.provider.dir";
 
     public ApplicationProviderSPILoader(Config config) {
         super(config);
-        if(config.hasPath(APPLICATIONS_DIR_PROPS_KEY)) {
+        if (config.hasPath(APPLICATIONS_DIR_PROPS_KEY)) {
             this.appProviderExtDir = config.getString(APPLICATIONS_DIR_PROPS_KEY);
-        }else{
+            LOG.warn("Using {}: {}", APPLICATIONS_DIR_PROPS_KEY, this.appProviderExtDir);
+        } else {
             this.appProviderExtDir = null;
         }
-
-        LOG.info("Using {}: {}",APPLICATIONS_DIR_PROPS_KEY,this.appProviderExtDir);
     }
 
     @Override
     public void load() {
-        if(appProviderExtDir != null) {
-            LOG.info("Loading application providers from class loader of jars in {}", appProviderExtDir);
+        if (appProviderExtDir != null) {
+            LOG.warn("Loading application providers from class loader of jars in {}", appProviderExtDir);
             File loc = new File(appProviderExtDir);
             File[] jarFiles = loc.listFiles(file -> file.getPath().toLowerCase().endsWith(".jar"));
             if (jarFiles != null) {
@@ -57,32 +59,39 @@ public class ApplicationProviderSPILoader extends ApplicationProviderLoader{
                     try {
                         URL jarFileUrl = jarFile.toURI().toURL();
                         LOG.debug("Loading ApplicationProvider from jar: {}", jarFileUrl.toString());
-                        URLClassLoader jarFileClassLoader = new URLClassLoader(new URL[]{jarFileUrl});
+                        URLClassLoader jarFileClassLoader = new URLClassLoader(new URL[] {jarFileUrl});
                         loadProviderFromClassLoader(jarFileClassLoader, (applicationProviderConfig) -> jarFileUrl.getPath());
                     } catch (Exception e) {
-                        LOG.warn("Failed to load application provider from jar {}", jarFile,e);
+                        LOG.warn("Failed to load application provider from jar {}", jarFile, e);
                     }
                 }
             }
         } else {
-            LOG.info("Loading application providers from context class loader");
+            LOG.warn("Loading application providers from context class loader");
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-            loadProviderFromClassLoader(classLoader,(applicationProviderConfig) -> DynamicJarPathFinder.findPath(applicationProviderConfig.getClass()));
+            loadProviderFromClassLoader(classLoader, (applicationProvider) -> DynamicJarPathFinder.findPath(applicationProvider.getClass()));
         }
     }
 
-    private void loadProviderFromClassLoader(ClassLoader jarFileClassLoader, Function<ApplicationProviderConfig,String> jarFileSupplier){
-        ServiceLoader<ApplicationProvider> serviceLoader = ServiceLoader.load(ApplicationProvider.class, jarFileClassLoader);
-        for (ApplicationProvider applicationProvider : serviceLoader) {
-            try {
+    private void loadProviderFromClassLoader(ClassLoader jarFileClassLoader, Function<ApplicationProvider, String> jarFileSupplier) {
+        ServiceLoader<ApplicationProvider> serviceLoader = ServiceLoader.load(ApplicationProvider.class);
+        try {
+            for (ApplicationProvider applicationProvider : serviceLoader) {
                 ApplicationProviderConfig providerConfig = new ApplicationProviderConfig();
                 providerConfig.setClassName(applicationProvider.getClass().getCanonicalName());
-                providerConfig.setJarPath(jarFileSupplier.apply(providerConfig));
-                applicationProvider.prepare(providerConfig, getConfig());
+                providerConfig.setJarPath(jarFileSupplier.apply(applicationProvider));
+                applicationProvider.getApplicationDesc().setExecutable(applicationProvider.getApplication().isExecutable());
                 registerProvider(applicationProvider);
-            }catch (Throwable ex){
-                LOG.warn("Failed to register application provider {}",applicationProvider,ex);
+                LOG.warn("Loaded {}:{} ({}) from {}",
+                    applicationProvider.getApplicationDesc().getType(),
+                    applicationProvider.getApplicationDesc().getVersion(),
+                    applicationProvider.getApplicationDesc().getName(),
+                    providerConfig.getJarPath()
+                );
             }
+        } catch (Throwable ex) {
+            LOG.error("Failed to register application provider", ex);
+            throw new IllegalStateException(ex);
         }
     }
 }

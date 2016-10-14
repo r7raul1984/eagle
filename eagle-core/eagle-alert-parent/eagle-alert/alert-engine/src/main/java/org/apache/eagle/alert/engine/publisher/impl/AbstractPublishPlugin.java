@@ -16,20 +16,25 @@
  */
 package org.apache.eagle.alert.engine.publisher.impl;
 
-import java.util.Map;
-
+import com.google.common.base.Joiner;
+import com.typesafe.config.Config;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.eagle.alert.engine.codec.IEventSerializer;
+import org.apache.eagle.alert.engine.coordinator.OverrideDeduplicatorSpec;
 import org.apache.eagle.alert.engine.coordinator.Publishment;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.publisher.AlertDeduplicator;
 import org.apache.eagle.alert.engine.publisher.AlertPublishPlugin;
+import org.apache.eagle.alert.engine.publisher.dedup.DedupCache;
+import org.apache.eagle.alert.engine.publisher.dedup.ExtendedDeduplicator;
 import org.slf4j.Logger;
 
-import com.typesafe.config.Config;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * @since Jun 3, 2016
- *
+ * @since Jun 3, 2016.
  */
 public abstract class AbstractPublishPlugin implements AlertPublishPlugin {
 
@@ -41,16 +46,43 @@ public abstract class AbstractPublishPlugin implements AlertPublishPlugin {
     @SuppressWarnings("rawtypes")
     @Override
     public void init(Config config, Publishment publishment, Map conf) throws Exception {
-        this.deduplicator = new DefaultDeduplicator(publishment.getDedupIntervalMin());
-        this.pubName = publishment.getName();
+        DedupCache dedupCache = new DedupCache(config, publishment.getName());
+        OverrideDeduplicatorSpec spec = publishment.getOverrideDeduplicator();
+        if (spec != null && StringUtils.isNotBlank(spec.getClassName())) {
+            try {
+                this.deduplicator = (ExtendedDeduplicator) Class.forName(
+                    spec.getClassName()).getConstructor(
+                    Config.class,
+                    Map.class,
+                    List.class,
+                    String.class,
+                    DedupCache.class,
+                    String.class).newInstance(
+                    config,
+                    spec.getProperties(),
+                    publishment.getDedupFields(),
+                    publishment.getDedupStateField(),
+                    dedupCache,
+                    publishment.getName());
+                getLogger().info("{} initiliazed extended deduplicator {} with properties {} successfully",
+                    publishment.getName(), spec.getClassName(), Joiner.on(",").withKeyValueSeparator(">").join(
+                        spec.getProperties() == null ? new HashMap<String, String>() : spec.getProperties()));
+            } catch (Throwable t) {
+                getLogger().error(String.format("initialize extended deduplicator %s failed", spec.getClassName()), t);
+            }
+        } else {
+            this.deduplicator = new DefaultDeduplicator(publishment.getDedupIntervalMin(),
+                publishment.getDedupFields(), publishment.getDedupStateField(), publishment.getDedupStateCloseValue(), dedupCache);
+            this.pubName = publishment.getName();
+        }
         String serializerClz = publishment.getSerializer();
         try {
             Object obj = Class.forName(serializerClz).getConstructor(Map.class).newInstance(conf);
             if (!(obj instanceof IEventSerializer)) {
-                throw new Exception(String.format("serializer %s of publishement %s is not subclass to %s!",
-                        publishment.getSerializer(),
-                        publishment.getName(),
-                        IEventSerializer.class.getName()));
+                throw new Exception(String.format("serializer %s of publishment %s is not subclass to %s!",
+                    publishment.getSerializer(),
+                    publishment.getName(),
+                    IEventSerializer.class.getName()));
             }
             serializer = (IEventSerializer) obj;
         } catch (Exception e) {
@@ -65,7 +97,7 @@ public abstract class AbstractPublishPlugin implements AlertPublishPlugin {
     }
 
     @Override
-    public AlertStreamEvent dedup(AlertStreamEvent event) {
+    public List<AlertStreamEvent> dedup(AlertStreamEvent event) {
         return deduplicator.dedup(event);
     }
 

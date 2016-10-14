@@ -18,14 +18,30 @@
 
 package org.apache.eagle.jpm.mr.history.zkres;
 
+import org.apache.commons.lang3.tuple.Pair;
+
 import java.util.List;
 
 public interface JobHistoryZKStateLCM {
     void ensureJobPartitions(int numTotalPartitions);
+
     String readProcessedDate(int partitionId);
+
     List<String> readProcessedJobs(String date);
+
     void updateProcessedDate(int partitionId, String date);
+
     void addProcessedJob(String date, String jobId);
+
+    void updateProcessedJob(String date, String jobId, String status);
+
     void truncateProcessedJob(String date);
+
     void truncateEverything();
+
+    long readProcessedTimeStamp(int partitionId);
+
+    void updateProcessedTimeStamp(int partitionId, long timeStamp);
+
+    List<Pair<String, String>> getProcessedJobs(String date);
 }

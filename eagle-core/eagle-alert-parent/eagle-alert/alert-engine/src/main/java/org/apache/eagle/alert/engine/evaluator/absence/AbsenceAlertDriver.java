@@ -22,8 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 /**
+ * this assumes that event comes in time order.
  * Since 7/7/16.
- * this assumes that event comes in time order
  */
 public class AbsenceAlertDriver {
     private static final Logger LOG = LoggerFactory.getLogger(AbsenceAlertDriver.class);
@@ -31,37 +31,44 @@ public class AbsenceAlertDriver {
     private AbsenceWindowProcessor processor;
     private AbsenceWindowGenerator windowGenerator;
 
-    public AbsenceAlertDriver(List<Object> expectedAttrs, AbsenceWindowGenerator windowGenerator){
+    public AbsenceAlertDriver(List<Object> expectedAttrs, AbsenceWindowGenerator windowGenerator) {
         this.expectedAttrs = expectedAttrs;
         this.windowGenerator = windowGenerator;
     }
 
-    public void process(List<Object> appearAttrs, long occurTime){
+    public boolean process(List<Object> appearAttrs, long occurTime) {
         // initialize window
-        if(processor == null){
+        if (processor == null) {
             processor = nextProcessor(occurTime);
             LOG.info("initialized a new window {}", processor);
         }
         processor.process(appearAttrs, occurTime);
         AbsenceWindowProcessor.OccurStatus status = processor.checkStatus();
         boolean expired = processor.checkExpired();
-        if(expired){
-            if(status == AbsenceWindowProcessor.OccurStatus.absent){
+        boolean isAbsenceAlert = false;
+        if (expired) {
+            if (status == AbsenceWindowProcessor.OccurStatus.absent) {
                 // send alert
-                LOG.info("this is an alert");
+                LOG.info("===================");
+                LOG.info("|| Absence Alert ||");
+                LOG.info("===================");
+                isAbsenceAlert = true;
                 // figure out next window and set the new window
             }
             processor = nextProcessor(occurTime);
             LOG.info("created a new window {}", processor);
         }
+
+        return isAbsenceAlert;
     }
 
     /**
-     * calculate absolute time range based on current timestamp
+     * calculate absolute time range based on current timestamp.
+     *
      * @param currTime milliseconds
      * @return
      */
-    private AbsenceWindowProcessor nextProcessor(long currTime){
+    private AbsenceWindowProcessor nextProcessor(long currTime) {
         AbsenceWindow window = windowGenerator.nextWindow(currTime);
         return new AbsenceWindowProcessor(expectedAttrs, window);
     }

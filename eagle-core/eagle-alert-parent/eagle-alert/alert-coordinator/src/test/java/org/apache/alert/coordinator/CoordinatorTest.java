@@ -44,7 +44,6 @@ import com.typesafe.config.ConfigFactory;
 
 /**
  * @since May 5, 2016
- *
  */
 public class CoordinatorTest {
 
@@ -52,10 +51,9 @@ public class CoordinatorTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-
         zkEmbed = new ZookeeperEmbedded(2181);
-        zkEmbed.start();
-
+        int zkPort = zkEmbed.start();
+        System.setProperty("coordinator.zkConfig.zkQuorum","localhost:"+ zkPort);
     }
 
     @AfterClass
@@ -63,7 +61,7 @@ public class CoordinatorTest {
         zkEmbed.shutdown();
     }
 
-    @SuppressWarnings({ "resource", "unused" })
+    @SuppressWarnings( {"resource", "unused"})
     @Ignore
     @Test
     public void test() throws Exception {
@@ -92,7 +90,7 @@ public class CoordinatorTest {
         Assert.assertTrue(validated.get());
     }
 
-    @SuppressWarnings({ "resource", "unused" })
+    @SuppressWarnings( {"resource", "unused"})
     @Test
     public void test_01() throws Exception {
         before();
@@ -128,7 +126,6 @@ public class CoordinatorTest {
     @Test
     public void test_main() throws Exception {
         before();
-
         Coordinator.main(null);
     }
 
@@ -138,7 +135,7 @@ public class CoordinatorTest {
         ConfigFactory.invalidateCaches();
         ConfigFactory.load().getConfig("coordinator");
     }
-    
+
     @Test
     public void test_Schedule() {
         Coordinator.startSchedule();

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -16,18 +16,70 @@
  */
 package org.apache.eagle.app.example;
 
+import org.apache.eagle.app.example.extensions.ExampleCommonService;
+import org.apache.eagle.app.example.extensions.ExampleCommonServiceImpl;
+import org.apache.eagle.app.example.extensions.ExampleEntityService;
+import org.apache.eagle.app.example.extensions.ExampleEntityServiceMemoryImpl;
+import org.apache.eagle.app.service.ApplicationListener;
 import org.apache.eagle.app.spi.AbstractApplicationProvider;
+import org.apache.eagle.metadata.model.ApplicationEntity;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import com.google.inject.Inject;
+
+import java.util.Optional;
 
 /**
- * Define application provider programmatically
+ * Define application provider pragmatically
  */
 public class ExampleApplicationProvider extends AbstractApplicationProvider<ExampleStormApplication> {
-    public ExampleApplicationProvider() {
-        super("/META-INF/apps/example/metadata.xml");
-    }
+    private static final Logger LOG = LoggerFactory.getLogger(ExampleApplicationProvider.class);
 
     @Override
     public ExampleStormApplication getApplication() {
         return new ExampleStormApplication();
+    }
+
+    @Override
+    public Optional<ApplicationListener> getApplicationListener() {
+        return Optional.of(new ApplicationListener() {
+
+            @Inject ExampleEntityService entityService;
+
+            private ApplicationEntity application;
+
+            @Override
+            public void init(ApplicationEntity applicationEntity) {
+                this.application = applicationEntity;
+                entityService.getEntities();
+            }
+
+            @Override
+            public void afterInstall() {
+                LOG.info("afterInstall {}", this.application);
+            }
+
+            @Override
+            public void afterUninstall() {
+                LOG.info("afterUninstall {}", this.application);
+            }
+
+            @Override
+            public void beforeStart() {
+                LOG.info("beforeStart {}", this.application);
+            }
+
+            @Override
+            public void afterStop() {
+                LOG.info("afterStop {}", this.application);
+            }
+        });
+    }
+
+    @Override
+    protected void onRegister() {
+        bindToMemoryMetaStore(ExampleEntityService.class,ExampleEntityServiceMemoryImpl.class);
+        bind(ExampleCommonService.class,ExampleCommonServiceImpl.class);
     }
 }

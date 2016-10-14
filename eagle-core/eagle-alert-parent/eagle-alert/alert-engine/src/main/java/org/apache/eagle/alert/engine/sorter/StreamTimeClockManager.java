@@ -20,20 +20,18 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- *
  * By default, we could keep the current time clock in memory,
  * Eventually we may need to consider the global time synchronization across all nodes
  *
- * TODO: maybe need to synchronize time clock globally
+ * <p>TODO: maybe need to synchronize time clock globally</p>
  *
- * 1) When to initialize window according to start time
+ * <p>1) When to initialize window according to start time
  * 2) When to close expired window according to current time
- * 3) Automatically tick periodically as the single place for control lock
- *
+ * 3) Automatically tick periodically as the single place for control lock.</p>
  */
-public interface StreamTimeClockManager extends StreamTimeClockTrigger, Serializable{
+public interface StreamTimeClockManager extends StreamTimeClockTrigger, Serializable {
     /**
-     * @return StreamTimeClock instance
+     * @return StreamTimeClock instance.
      */
     StreamTimeClock createStreamTimeClock(String streamId);
 

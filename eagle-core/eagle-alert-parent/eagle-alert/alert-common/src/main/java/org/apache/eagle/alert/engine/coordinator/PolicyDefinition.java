@@ -16,18 +16,19 @@
  */
 package org.apache.eagle.alert.engine.coordinator;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import java.io.Serializable;
+import java.util.*;
+
 /**
- * @since Apr 5, 2016
- *
+ * @since Apr 5, 2016.
  */
-public class PolicyDefinition implements Serializable{
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class PolicyDefinition implements Serializable {
     private static final long serialVersionUID = 377581499339572414L;
     // unique identifier
     private String name;
@@ -36,6 +37,8 @@ public class PolicyDefinition implements Serializable{
     private List<String> outputStreams = new ArrayList<String>();
 
     private Definition definition;
+    private Definition stateDefinition;
+    private PolicyStatus policyStatus = PolicyStatus.ENABLED;
 
     // one stream only have one partition in one policy, since we don't support stream alias
     private List<StreamPartition> partitionSpec = new ArrayList<StreamPartition>();
@@ -79,6 +82,14 @@ public class PolicyDefinition implements Serializable{
         return definition;
     }
 
+    public Definition getStateDefinition() {
+        return stateDefinition;
+    }
+
+    public void setStateDefinition(Definition stateDefinition) {
+        this.stateDefinition = stateDefinition;
+    }
+
     public void setDefinition(Definition definition) {
         this.definition = definition;
     }
@@ -103,46 +114,65 @@ public class PolicyDefinition implements Serializable{
         this.parallelismHint = parallelism;
     }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder().
-                append(name).
-                append(description).
-                append(inputStreams).
-                append(outputStreams).
-                append(definition).
-                append(partitionSpec).
-//                append(parallelismHint).
-                build();
+    public PolicyStatus getPolicyStatus() {
+        return policyStatus;
+    }
+
+    public void setPolicyStatus(PolicyStatus policyStatus) {
+        this.policyStatus = policyStatus;
     }
 
     @Override
-    public boolean equals(Object that){
-        if(that == this)
+    public int hashCode() {
+        return new HashCodeBuilder()
+            .append(name)
+            .append(inputStreams)
+            .append(outputStreams)
+            .append(definition)
+            .append(partitionSpec)
+            // .append(parallelismHint)
+            .build();
+    }
+
+    @Override
+    public boolean equals(Object that) {
+        if (that == this) {
             return true;
-        if(! (that instanceof PolicyDefinition))
+        }
+
+        if (!(that instanceof PolicyDefinition)) {
             return false;
-        PolicyDefinition another = (PolicyDefinition)that;
-        if(another.name.equals(this.name) &&
-                another.description.equals(this.description) &&
-                CollectionUtils.isEqualCollection(another.inputStreams, this.inputStreams) &&
-                CollectionUtils.isEqualCollection(another.outputStreams, this.outputStreams) &&
-                another.definition.equals(this.definition) &&
-                CollectionUtils.isEqualCollection(another.partitionSpec, this.partitionSpec) 
-//                && another.parallelismHint == this.parallelismHint
-                ) {
+        }
+
+        PolicyDefinition another = (PolicyDefinition) that;
+
+        if (Objects.equals(another.name, this.name)
+            && Objects.equals(another.description, this.description)
+            && CollectionUtils.isEqualCollection(another.inputStreams, this.inputStreams)
+            && CollectionUtils.isEqualCollection(another.outputStreams, this.outputStreams)
+            && (another.definition != null && another.definition.equals(this.definition))
+            && Objects.equals(this.definition, another.definition)
+            && CollectionUtils.isEqualCollection(another.partitionSpec, this.partitionSpec)
+            // && another.parallelismHint == this.parallelismHint
+            ) {
             return true;
         }
         return false;
     }
 
-    public static class Definition implements Serializable{
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Definition implements Serializable {
         private static final long serialVersionUID = -622366527887848346L;
 
         public String type;
         public String value;
+        public String handlerClass;
+        public Map<String, Object> properties = new HashMap<>();
 
-        public Definition(String type,String value){
+        private List<String> inputStreams = new ArrayList<String>();
+        private List<String> outputStreams = new ArrayList<String>();
+
+        public Definition(String type, String value) {
             this.type = type;
             this.value = value;
         }
@@ -158,15 +188,20 @@ public class PolicyDefinition implements Serializable{
         }
 
         @Override
-        public boolean equals(Object that){
-            if(that == this)
+        public boolean equals(Object that) {
+            if (that == this) {
                 return true;
-            if(!(that instanceof Definition))
+            }
+            if (!(that instanceof Definition)) {
                 return false;
-            Definition another = (Definition)that;
-            if(another.type.equals(this.type) &&
-                    another.value.equals(this.value))
+            }
+            Definition another = (Definition) that;
+            if (another.type.equals(this.type)
+                && another.value.equals(this.value)
+                && ListUtils.isEqualList(another.inputStreams, this.inputStreams)
+                && ListUtils.isEqualList(another.outputStreams, this.outputStreams)) {
                 return true;
+            }
             return false;
         }
 
@@ -186,14 +221,50 @@ public class PolicyDefinition implements Serializable{
             this.value = value;
         }
 
+        public void setInputStreams(List<String> inputStreams) {
+            this.inputStreams = inputStreams;
+        }
+
+        public void setOutputStreams(List<String> outputStreams) {
+            this.outputStreams = outputStreams;
+        }
+
+        public List<String> getInputStreams() {
+            return inputStreams;
+        }
+
+        public List<String> getOutputStreams() {
+            return outputStreams;
+        }
+
+        public String getHandlerClass() {
+            return handlerClass;
+        }
+
+        public void setHandlerClass(String handlerClass) {
+            this.handlerClass = handlerClass;
+        }
+
+        public Map<String, Object> getProperties() {
+            return properties;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
+        }
+
         @Override
         public String toString() {
-            return String.format("{type=\"%s\",value=\"%s\"",type,value);
+            return String.format("{type=\"%s\",value=\"%s\", inputStreams=\"%s\", outputStreams=\"%s\" }", type, value, inputStreams, outputStreams);
         }
+    }
+
+    public static enum PolicyStatus {
+        ENABLED, DISABLED
     }
 
     @Override
     public String toString() {
-        return String.format("{name=\"%s\",definition=%s}",this.getName(),this.getDefinition().toString());
+        return String.format("{name=\"%s\",definition=%s}", this.getName(), this.getDefinition() == null ? "null" : this.getDefinition().toString());
     }
 }

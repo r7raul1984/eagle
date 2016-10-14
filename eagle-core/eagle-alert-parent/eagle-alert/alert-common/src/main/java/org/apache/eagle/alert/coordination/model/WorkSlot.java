@@ -17,9 +17,11 @@
 package org.apache.eagle.alert.coordination.model;
 
 
+import java.io.Serializable;
+import java.util.Objects;
+
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
-import java.io.Serializable;
 import java.util.Objects;
 
 /**
@@ -64,8 +66,8 @@ public class WorkSlot implements Serializable {
             return false;
         }
         WorkSlot workSlot = (WorkSlot) other;
-        return Objects.equals(topologyName, workSlot.topologyName) &&
-                Objects.equals(boltId, workSlot.boltId);
+        return Objects.equals(topologyName, workSlot.topologyName)
+            && Objects.equals(boltId, workSlot.boltId);
     }
 
     @Override

@@ -16,51 +16,59 @@
  */
 package org.apache.eagle.alert.engine.model;
 
+import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.utils.DateTimeUtil;
+import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
-import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.utils.DateTimeUtil;
-
 /**
- * streamId stands for alert type instead of source event streamId
+ * streamId stands for alert type instead of source event streamId.
  */
 public class AlertStreamEvent extends StreamEvent {
     private static final long serialVersionUID = 2392131134670106397L;
 
-    // TODO: Keep policy name only instead of policy entity
-    private PolicyDefinition policy;
+    private String policyId;
     private StreamDefinition schema;
     private String createdBy;
     private long createdTime;
 
-    public PolicyDefinition getPolicy() {
-        return policy;
+    public AlertStreamEvent() {
     }
 
-    public void setPolicy(PolicyDefinition policy) {
-        this.policy = policy;
+    public AlertStreamEvent(AlertStreamEvent event) {
+        this.policyId = event.policyId;
+        this.schema = event.schema;
+        this.createdBy = event.createdBy;
+        this.createdTime = event.createdTime;
+        this.setTimestamp(event.getTimestamp());
+        this.setData(new Object[event.data.length]);
+        System.arraycopy(event.data, 0, this.data, 0, event.data.length);
+        this.setStreamId(event.getStreamId());
+        this.setMetaVersion(event.getMetaVersion());
     }
 
+    public void setPolicyId(String policyId) {
+        this.policyId = policyId;
+    }
 
     public String getPolicyId() {
-        return policy.getName();
+        return policyId;
     }
 
     @Override
     public String toString() {
         List<String> dataStrings = new ArrayList<>(this.getData().length);
-        for(Object obj: this.getData()){
-            if(obj!=null) {
+        for (Object obj : this.getData()) {
+            if (obj != null) {
                 dataStrings.add(obj.toString());
-            }else{
+            } else {
                 dataStrings.add(null);
             }
         }
-        return String.format("AlertStreamEvent[stream=%S,timestamp=%s,data=[%s], policy=%s, createdBy=%s]",
-                this.getStreamId(), DateTimeUtil.millisecondsToHumanDateWithMilliseconds(this.getTimestamp()), StringUtils.join(dataStrings,","),this.getPolicy().getName(),this.getCreatedBy());
+        return String.format("AlertStreamEvent[stream=%S,timestamp=%s,data=[%s], policyId=%s, createdBy=%s, metaVersion=%s]",
+            this.getStreamId(), DateTimeUtil.millisecondsToHumanDateWithMilliseconds(this.getTimestamp()),
+            StringUtils.join(dataStrings, ","), this.getPolicyId(), this.getCreatedBy(), this.getMetaVersion());
     }
 
     public String getCreatedBy() {

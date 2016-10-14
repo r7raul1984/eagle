@@ -18,8 +18,12 @@
 
 package org.apache.eagle.jpm.mr.history.parser;
 
-import org.apache.eagle.jpm.mr.history.common.JHFConfigManager;
-import org.apache.eagle.jpm.mr.history.entities.*;
+import org.apache.eagle.jpm.mr.history.MRHistoryJobConfig;
+import org.apache.eagle.jpm.mr.history.metrics.JobExecutionMetricsCreationListener;
+import org.apache.eagle.jpm.mr.history.zkres.JobHistoryZKStateManager;
+import org.apache.eagle.jpm.mr.historyentity.*;
+import org.apache.eagle.jpm.util.MRJobTagName;
+import org.apache.eagle.log.entity.GenericMetricEntity;
 import org.apache.eagle.log.entity.GenericServiceAPIResponseEntity;
 import org.apache.eagle.service.client.IEagleServiceClient;
 import org.apache.eagle.service.client.impl.EagleServiceClientImpl;
@@ -27,30 +31,34 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.TimeZone;
 
 public class JobEntityCreationEagleServiceListener implements HistoryJobEntityCreationListener {
     private static final Logger logger = LoggerFactory.getLogger(JobEntityCreationEagleServiceListener.class);
     private static final int BATCH_SIZE = 1000;
     private int batchSize;
     private List<JobBaseAPIEntity> list = new ArrayList<>();
-    private JHFConfigManager configManager;
     List<JobExecutionAPIEntity> jobs = new ArrayList<>();
     List<JobEventAPIEntity> jobEvents = new ArrayList<>();
     List<TaskExecutionAPIEntity> taskExecs = new ArrayList<>();
     List<TaskAttemptExecutionAPIEntity> taskAttemptExecs = new ArrayList<>();
-    
-    public JobEntityCreationEagleServiceListener(JHFConfigManager configManager){
-        this(configManager, BATCH_SIZE);
+    private JobExecutionMetricsCreationListener jobExecutionMetricsCreationListener = new JobExecutionMetricsCreationListener();
+    private TimeZone timeZone;
+
+    public JobEntityCreationEagleServiceListener() {
+        this(BATCH_SIZE);
     }
-    
-    public JobEntityCreationEagleServiceListener(JHFConfigManager configManager, int batchSize) {
-        this.configManager = configManager;
-        if (batchSize <= 0)
+
+    public JobEntityCreationEagleServiceListener(int batchSize) {
+        if (batchSize <= 0) {
             throw new IllegalArgumentException("batchSize must be greater than 0 when it is provided");
+        }
         this.batchSize = batchSize;
+        timeZone = TimeZone.getTimeZone(MRHistoryJobConfig.get().getControlConfig().timeZone);
     }
-    
+
     @Override
     public void jobEntityCreated(JobBaseAPIEntity entity) throws Exception {
         list.add(entity);
@@ -60,31 +68,44 @@ public class JobEntityCreationEagleServiceListener implements HistoryJobEntityCr
         }
     }
 
+    private String timeStamp2Date(long timeStamp) {
+        GregorianCalendar cal = new GregorianCalendar(timeZone);
+        cal.setTimeInMillis(timeStamp);
+        return  String.format("%4d%02d%02d",
+            cal.get(GregorianCalendar.YEAR),
+            cal.get(GregorianCalendar.MONTH) + 1,
+            cal.get(GregorianCalendar.DAY_OF_MONTH));
+    }
+
     /**
-     * We need save network bandwidth as well
+     * We need save network bandwidth as well.
      */
     @Override
     public void flush() throws Exception {
-        JHFConfigManager.EagleServiceConfig eagleServiceConfig = configManager.getEagleServiceConfig();
-        JHFConfigManager.JobExtractorConfig jobExtractorConfig = configManager.getJobExtractorConfig();
         IEagleServiceClient client = new EagleServiceClientImpl(
-                eagleServiceConfig.eagleServiceHost,
-                eagleServiceConfig.eagleServicePort,
-                eagleServiceConfig.username,
-                eagleServiceConfig.password);
+            MRHistoryJobConfig.get().getEagleServiceConfig().eagleServiceHost,
+            MRHistoryJobConfig.get().getEagleServiceConfig().eagleServicePort,
+            MRHistoryJobConfig.get().getEagleServiceConfig().username,
+            MRHistoryJobConfig.get().getEagleServiceConfig().password);
 
-        client.getJerseyClient().setReadTimeout(jobExtractorConfig.readTimeoutSeconds * 1000);
+        client.getJerseyClient().setReadTimeout(MRHistoryJobConfig.get().getJobExtractorConfig().readTimeoutSeconds * 1000);
         logger.info("start flushing entities of total number " + list.size());
+        List<GenericMetricEntity> metricEntities = new ArrayList<>();
         for (int i = 0; i < list.size(); i++) {
             JobBaseAPIEntity entity = list.get(i);
             if (entity instanceof JobExecutionAPIEntity) {
-                jobs.add((JobExecutionAPIEntity)entity);
-            } else if(entity instanceof JobEventAPIEntity) {
-                jobEvents.add((JobEventAPIEntity)entity);
-            } else if(entity instanceof TaskExecutionAPIEntity) {
-                taskExecs.add((TaskExecutionAPIEntity)entity);
-            } else if(entity instanceof TaskAttemptExecutionAPIEntity) {
-                taskAttemptExecs.add((TaskAttemptExecutionAPIEntity)entity);
+                jobs.add((JobExecutionAPIEntity) entity);
+                JobHistoryZKStateManager.instance().updateProcessedJob(timeStamp2Date(entity.getTimestamp()),
+                    entity.getTags().get(MRJobTagName.JOB_ID.toString()),
+                    ((JobExecutionAPIEntity) entity).getCurrentState());
+
+                metricEntities.addAll(jobExecutionMetricsCreationListener.generateMetrics((JobExecutionAPIEntity)entity));
+            } else if (entity instanceof JobEventAPIEntity) {
+                jobEvents.add((JobEventAPIEntity) entity);
+            } else if (entity instanceof TaskExecutionAPIEntity) {
+                taskExecs.add((TaskExecutionAPIEntity) entity);
+            } else if (entity instanceof TaskAttemptExecutionAPIEntity) {
+                taskAttemptExecs.add((TaskAttemptExecutionAPIEntity) entity);
             }
         }
         GenericServiceAPIResponseEntity result;
@@ -93,6 +114,12 @@ public class JobEntityCreationEagleServiceListener implements HistoryJobEntityCr
             result = client.create(jobs);
             checkResult(result);
             jobs.clear();
+        }
+        if (metricEntities.size() > 0) {
+            logger.info("flush job metrics of number " + metricEntities.size());
+            result = client.create(metricEntities);
+            checkResult(result);
+            metricEntities.clear();
         }
         if (jobEvents.size() > 0) {
             logger.info("flush JobEventAPIEntity of number " + jobEvents.size());
@@ -112,12 +139,13 @@ public class JobEntityCreationEagleServiceListener implements HistoryJobEntityCr
             checkResult(result);
             taskAttemptExecs.clear();
         }
+
         logger.info("finish flushing entities of total number " + list.size());
         list.clear();
         client.getJerseyClient().destroy();
         client.close();
     }
-    
+
     private void checkResult(GenericServiceAPIResponseEntity result) throws Exception {
         if (!result.isSuccess()) {
             logger.error(result.getException());

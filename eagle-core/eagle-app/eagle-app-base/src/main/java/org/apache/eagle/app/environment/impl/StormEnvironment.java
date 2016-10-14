@@ -16,27 +16,19 @@
  */
 package org.apache.eagle.app.environment.impl;
 
-import com.typesafe.config.Config;
-import org.apache.eagle.app.Configuration;
 import org.apache.eagle.app.environment.AbstractEnvironment;
-import org.apache.eagle.app.sink.FlattenEventMapper;
-import org.apache.eagle.app.sink.LoggingStreamSink;
 import org.apache.eagle.app.sink.StormStreamSink;
-import org.apache.eagle.app.sink.StreamSink;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import scala.Int;
-import storm.trident.spout.RichSpoutBatchExecutor;
+import com.typesafe.config.Config;
 
 /**
- * Storm Execution Environment Context
+ * Storm Execution Environment Context.
  */
 public class StormEnvironment extends AbstractEnvironment {
     public StormEnvironment(Config envConfig) {
         super(envConfig);
     }
 
-    public StormStreamSink getFlattenStreamSink(String streamId,Configuration appConfig) {
-        return ((StormStreamSink) streamSink().getSink(streamId,appConfig)).setEventMapper(new FlattenEventMapper(streamId));
+    public StormStreamSink getStreamSink(String streamId, Config config) {
+        return ((StormStreamSink) streamSink().getSink(streamId,config));
     }
 }

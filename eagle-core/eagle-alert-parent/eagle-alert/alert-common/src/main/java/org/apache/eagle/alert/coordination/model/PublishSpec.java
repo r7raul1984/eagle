@@ -17,16 +17,10 @@
 package org.apache.eagle.alert.coordination.model;
 
 import java.io.Serializable;
+import org.apache.eagle.alert.engine.coordinator.Publishment;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.eagle.alert.engine.coordinator.Publishment;
-
-/**
- * 
- * @since May 1, 2016
- *
- */
 public class PublishSpec implements Serializable {
 
     private String topologyName;

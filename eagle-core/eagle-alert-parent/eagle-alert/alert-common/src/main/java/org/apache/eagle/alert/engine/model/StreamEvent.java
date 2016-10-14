@@ -16,34 +16,42 @@
  */
 package org.apache.eagle.alert.engine.model;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.utils.DateTimeUtil;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.utils.DateTimeUtil;
-
 /**
- * @since Apr 5, 2016
- *
+ * @since Apr 5, 2016.
  */
 public class StreamEvent implements Serializable {
     private static final long serialVersionUID = 2765116509856609763L;
 
-    private String streamId;
-    private Object[] data;
-    private long timestamp;
+    protected String streamId;
+    protected Object[] data;
+    protected long timestamp;
+    protected String metaVersion;
 
-    public StreamEvent(){}
+    public StreamEvent() {
+    }
 
-    public StreamEvent(String streamId,long timestamp,Object[] data){
+    public StreamEvent(String streamId, long timestamp, Object[] data) {
         this.setStreamId(streamId);
         this.setTimestamp(timestamp);
         this.setData(data);
+    }
+
+    public StreamEvent(String streamId, long timestamp, Object[] data, String metaVersion) {
+        this.setStreamId(streamId);
+        this.setTimestamp(timestamp);
+        this.setData(data);
+        this.setMetaVersion(metaVersion);
     }
 
     public String getStreamId() {
@@ -54,9 +62,6 @@ public class StreamEvent implements Serializable {
         this.streamId = streamId;
     }
 
-    public Object[] getData() {
-        return data;
-    }
 
     public void setData(Object[] data) {
         this.data = data;
@@ -70,17 +75,27 @@ public class StreamEvent implements Serializable {
         this.timestamp = timestamp;
     }
 
+    public String getMetaVersion() {
+        return metaVersion;
+    }
+
+    public void setMetaVersion(String metaVersion) {
+        this.metaVersion = metaVersion;
+    }
+
     @Override
     public int hashCode() {
-        return new HashCodeBuilder().append(streamId).append(timestamp).append(data).build();
+        return new HashCodeBuilder().append(streamId).append(timestamp).append(data).append(metaVersion).build();
     }
 
     @Override
     public boolean equals(Object obj) {
-        if(obj == this) return true;
-        if(obj instanceof StreamEvent){
+        if (obj == this) {
+            return true;
+        }
+        if (obj instanceof StreamEvent) {
             StreamEvent another = (StreamEvent) obj;
-            return Objects.equals(this.streamId,another.streamId) && this.timestamp == another.timestamp && Arrays.deepEquals(this.data,another.data);
+            return Objects.equals(this.streamId, another.streamId) && this.timestamp == another.timestamp && Arrays.deepEquals(this.data, another.data);
         }
         return false;
     }
@@ -88,7 +103,7 @@ public class StreamEvent implements Serializable {
     @Override
     public String toString() {
         List<String> dataStrings = new ArrayList<>();
-        if(this.getData() != null) {
+        if (this.getData() != null) {
             for (Object obj : this.getData()) {
                 if (obj != null) {
                     dataStrings.add(obj.toString());
@@ -97,36 +112,41 @@ public class StreamEvent implements Serializable {
                 }
             }
         }
-        return String.format("StreamEvent[stream=%S,timestamp=%s,data=[%s]]",this.getStreamId(), DateTimeUtil.millisecondsToHumanDateWithMilliseconds(this.getTimestamp()), StringUtils.join(dataStrings,","));
+        return String.format("StreamEvent[stream=%S,timestamp=%s,data=[%s],metaVersion=%s]",
+            this.getStreamId(),
+            DateTimeUtil.millisecondsToHumanDateWithMilliseconds(this.getTimestamp()),
+            StringUtils.join(dataStrings, ","),
+            this.getMetaVersion());
     }
 
-    public static StreamEventBuilder Builder(){
+    public static StreamEventBuilder builder() {
         return new StreamEventBuilder();
     }
 
     /**
-     * @return cloned new event object
+     * @return cloned new event object.
      */
-    public StreamEvent copy(){
+    public StreamEvent copy() {
         StreamEvent newEvent = new StreamEvent();
         newEvent.setTimestamp(this.getTimestamp());
         newEvent.setData(this.getData());
         newEvent.setStreamId(this.getStreamId());
+        newEvent.setMetaVersion(this.getMetaVersion());
         return newEvent;
     }
 
-    public void copyFrom(StreamEvent event){
+    public void copyFrom(StreamEvent event) {
         this.setTimestamp(event.getTimestamp());
         this.setData(event.getData());
         this.setStreamId(event.getStreamId());
+        this.setMetaVersion(event.getMetaVersion());
     }
 
-    /**
-     * @param column
-     * @param streamDefinition
-     * @return
-     */
-    public Object[] getData(StreamDefinition streamDefinition,List<String> column) {
+    public Object[] getData() {
+        return data;
+    }
+
+    public Object[] getData(StreamDefinition streamDefinition, List<String> column) {
         ArrayList<Object> result = new ArrayList<>(column.size());
         for (String colName : column) {
             result.add(this.getData()[streamDefinition.getColumnIndex(colName)]);
@@ -134,7 +154,7 @@ public class StreamEvent implements Serializable {
         return result.toArray();
     }
 
-    public Object[] getData(StreamDefinition streamDefinition,String ... column) {
+    public Object[] getData(StreamDefinition streamDefinition, String... column) {
         ArrayList<Object> result = new ArrayList<>(column.length);
         for (String colName : column) {
             result.add(this.getData()[streamDefinition.getColumnIndex(colName)]);

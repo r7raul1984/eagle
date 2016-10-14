@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -16,34 +16,34 @@
  */
 package org.apache.eagle.app.sink;
 
-import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.engine.model.StreamEvent;
-import org.apache.eagle.app.Configuration;
+import backtype.storm.topology.BasicOutputCollector;
+import com.typesafe.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 public class LoggingStreamSink extends StormStreamSink<DefaultStreamSinkConfig> {
-    private final static Logger LOGGER = LoggerFactory.getLogger(KafkaStreamSink.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaStreamSink.class);
 
     @Override
-    protected void onEvent(StreamEvent streamEvent) {
-        LOGGER.info("Receiving {}",streamEvent);
+    public void afterInstall() {
+        LOGGER.info("Executing afterInstall callback, do nothing");
     }
 
     @Override
-    public void onInstall() {
-        LOGGER.info("Executing onInstall callback, do nothing");
+    public void afterUninstall() {
+        LOGGER.info("Executing afterUninstall callback, do nothing");
     }
 
     @Override
-    public void onUninstall() {
-        LOGGER.info("Executing onUninstall callback, do nothing");
+    protected void execute(Object key, Map event, BasicOutputCollector collector) {
+        LOGGER.info("Receiving {}", event);
     }
 
-
-    public static class Provider implements StreamSinkProvider<LoggingStreamSink,DefaultStreamSinkConfig> {
+    public static class Provider implements StreamSinkProvider<LoggingStreamSink, DefaultStreamSinkConfig> {
         @Override
-        public DefaultStreamSinkConfig getSinkConfig(String streamId, Configuration appConfig) {
+        public DefaultStreamSinkConfig getSinkConfig(String streamId, Config config) {
             return new DefaultStreamSinkConfig(LoggingStreamSink.class);
         }
 

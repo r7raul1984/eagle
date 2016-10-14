@@ -32,10 +32,18 @@ import org.apache.eagle.alert.engine.sorter.StreamWindowManager;
 import org.apache.eagle.alert.engine.sorter.StreamWindowRepository;
 import org.apache.eagle.alert.utils.DateTimeUtil;
 import org.apache.eagle.alert.utils.TimePeriodUtils;
+
+import org.apache.commons.lang3.time.StopWatch;
 import org.joda.time.Period;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.*;
+
+public class StreamWindowManagerImpl implements StreamWindowManager {
+    private static final Logger LOG = LoggerFactory.getLogger(StreamWindowManagerImpl.class);
+    private final TreeMap<Long, StreamWindow> windowBuckets;
+    private final PartitionedEventCollector collector;
 public class StreamWindowManagerImpl implements StreamWindowManager, Serializable {
     private final static Logger LOG = LoggerFactory.getLogger(StreamWindowManagerImpl.class);
     private final TreeMap<Long,StreamWindow> windowBuckets;
@@ -46,7 +54,7 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
     private transient final Comparator<PartitionedEvent> comparator;
     private long rejectTime;
 
-    public StreamWindowManagerImpl(Period windowPeriod, long windowMargin, Comparator<PartitionedEvent> comparator, PartitionedEventCollector collector){
+    public StreamWindowManagerImpl(Period windowPeriod, long windowMargin, Comparator<PartitionedEvent> comparator, PartitionedEventCollector collector) {
         this.windowBuckets = new TreeMap<>();
         this.windowPeriod = windowPeriod;
         this.windowMargin = windowMargin;
@@ -65,12 +73,14 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
                 addWindow(window);
                 return window;
             } else {
-                throw new IllegalStateException("Failed to create new window, as " + DateTimeUtil.millisecondsToHumanDateWithMilliseconds(initialTime) + " is too late, only allow timestamp after " + DateTimeUtil.millisecondsToHumanDateWithMilliseconds(rejectTime));
+                throw new IllegalStateException("Failed to create new window, as "
+                    + DateTimeUtil.millisecondsToHumanDateWithMilliseconds(initialTime) + " is too late, only allow timestamp after "
+                    + DateTimeUtil.millisecondsToHumanDateWithMilliseconds(rejectTime));
             }
         }
     }
 
-    private void addWindow(StreamWindow window){
+    private void addWindow(StreamWindow window) {
         if (!windowBuckets.containsKey(window.startTime())) {
             windowBuckets.put(window.startTime(), window);
         } else {
@@ -122,37 +132,41 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
     }
 
     @Override
-    public void onTick(StreamTimeClock clock,long globalSystemTime) {
+    public void onTick(StreamTimeClock clock, long globalSystemTime) {
         synchronized (windowBuckets) {
             List<StreamWindow> toRemoved = new ArrayList<>();
             List<StreamWindow> aliveWindow = new ArrayList<>();
 
             for (StreamWindow windowBucket : windowBuckets.values()) {
                 windowBucket.onTick(clock, globalSystemTime);
-                if (windowBucket.rejectTime() > rejectTime) rejectTime = windowBucket.rejectTime();
+                if (windowBucket.rejectTime() > rejectTime) {
+                    rejectTime = windowBucket.rejectTime();
+                }
             }
             for (StreamWindow windowBucket : windowBuckets.values()) {
-                if (windowBucket.expired() || windowBucket.endTime() <=rejectTime) {
+                if (windowBucket.expired() || windowBucket.endTime() <= rejectTime) {
                     toRemoved.add(windowBucket);
                 } else {
                     aliveWindow.add(windowBucket);
                 }
             }
-            toRemoved.forEach(this::CloseAndRemoveWindow);
-            if (toRemoved.size() > 0) LOG.info("Windows: {} alive = {}, {} expired = {}", aliveWindow.size(), aliveWindow, toRemoved.size(), toRemoved);
+            toRemoved.forEach(this::closeAndRemoveWindow);
+            if (toRemoved.size() > 0) {
+                LOG.info("Windows: {} alive = {}, {} expired = {}", aliveWindow.size(), aliveWindow, toRemoved.size(), toRemoved);
+            }
         }
     }
 
-    private void CloseAndRemoveWindow(StreamWindow windowBucket){
+    private void closeAndRemoveWindow(StreamWindow windowBucket) {
         StopWatch stopWatch = new StopWatch();
         stopWatch.start();
-        CloseWindow(windowBucket);
+        closeWindow(windowBucket);
         removeWindow(windowBucket);
         stopWatch.stop();
-        LOG.info("Removed {} in {} ms",windowBucket,stopWatch.getTime());
+        LOG.info("Removed {} in {} ms", windowBucket, stopWatch.getTime());
     }
 
-    private void CloseWindow(StreamWindow windowBucket){
+    private void closeWindow(StreamWindow windowBucket) {
         windowBucket.close();
     }
 
@@ -164,7 +178,7 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
             int count = 0;
             for (StreamWindow windowBucket : getWindows()) {
                 count++;
-                CloseWindow(windowBucket);
+                closeWindow(windowBucket);
             }
             windowBuckets.clear();
             stopWatch.stop();

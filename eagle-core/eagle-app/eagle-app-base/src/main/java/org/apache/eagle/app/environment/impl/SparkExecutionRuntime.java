@@ -17,9 +17,10 @@
 package org.apache.eagle.app.environment.impl;
 
 import org.apache.eagle.app.Application;
-import org.apache.eagle.app.Configuration;
 import org.apache.eagle.app.environment.ExecutionRuntime;
 import org.apache.eagle.app.environment.ExecutionRuntimeProvider;
+import com.typesafe.config.Config;
+import org.apache.eagle.metadata.model.ApplicationEntity;
 
 public class SparkExecutionRuntime implements ExecutionRuntime<SparkEnvironment,Object> {
     @Override
@@ -33,19 +34,17 @@ public class SparkExecutionRuntime implements ExecutionRuntime<SparkEnvironment,
     }
 
     @Override
-    public void start(Application executor, Configuration config) {
-
+    public void start(Application executor, Config config) {
         throw new RuntimeException("Not implemented yet");
     }
 
     @Override
-    public void stop(Application executor, Configuration config) {
-
+    public void stop(Application executor, Config config) {
         throw new RuntimeException("Not implemented yet");
     }
 
     @Override
-    public void status(Application executor, Configuration config) {
+    public ApplicationEntity.Status status(Application executor, Config config) {
         throw new RuntimeException("Not implemented yet");
     }
 

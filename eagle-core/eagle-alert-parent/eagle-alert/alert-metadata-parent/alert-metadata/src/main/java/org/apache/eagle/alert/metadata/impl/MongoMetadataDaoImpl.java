@@ -16,33 +16,20 @@
  */
 package org.apache.eagle.alert.metadata.impl;
 
-import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-
-import com.google.inject.Inject;
-import org.apache.eagle.alert.coordination.model.Kafka2TupleMetadata;
-import org.apache.eagle.alert.coordination.model.ScheduleState;
+import org.apache.eagle.alert.coordination.model.*;
+import org.apache.eagle.alert.coordination.model.internal.MonitoredStream;
 import org.apache.eagle.alert.coordination.model.internal.PolicyAssignment;
+import org.apache.eagle.alert.coordination.model.internal.ScheduleStateBase;
 import org.apache.eagle.alert.coordination.model.internal.Topology;
-import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
-import org.apache.eagle.alert.engine.coordinator.Publishment;
-import org.apache.eagle.alert.engine.coordinator.PublishmentType;
-import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.engine.coordinator.StreamingCluster;
+import org.apache.eagle.alert.engine.coordinator.*;
 import org.apache.eagle.alert.metadata.IMetadataDao;
 import org.apache.eagle.alert.metadata.MetadataUtils;
 import org.apache.eagle.alert.metadata.resource.Models;
 import org.apache.eagle.alert.metadata.resource.OpResult;
-import org.bson.BsonDocument;
-import org.bson.BsonInt32;
-import org.bson.BsonString;
-import org.bson.Document;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Inject;
+import com.mongodb.Block;
 import com.mongodb.Function;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientURI;
@@ -53,16 +40,25 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import com.typesafe.config.Config;
+import org.bson.BsonDocument;
+import org.bson.BsonInt32;
+import org.bson.BsonString;
+import org.bson.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.*;
 
 /**
- * @since Apr 11, 2016
- *
+ * @since Apr 11, 2016.
  */
 public class MongoMetadataDaoImpl implements IMetadataDao {
 
     private static final String DB_NAME = "ump_alert_metadata";
     private static final Logger LOG = LoggerFactory.getLogger(MongoMetadataDaoImpl.class);
     private static final ObjectMapper mapper = new ObjectMapper();
+
     static {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
@@ -77,9 +73,18 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
     private MongoCollection<Document> policy;
     private MongoCollection<Document> publishment;
     private MongoCollection<Document> publishmentType;
-    private MongoCollection<Document> scheduleStates;
-    private MongoCollection<Document> assignments;
     private MongoCollection<Document> topologies;
+
+    // scheduleStates splits to several collections
+    private MongoCollection<Document> scheduleStates;
+    private MongoCollection<Document> spoutSpecs;
+    private MongoCollection<Document> alertSpecs;
+    private MongoCollection<Document> groupSpecs;
+    private MongoCollection<Document> publishSpecs;
+    private MongoCollection<Document> policySnapshots;
+    private MongoCollection<Document> streamSnapshots;
+    private MongoCollection<Document> monitoredStreams;
+    private MongoCollection<Document> assignments;
 
     @Inject
     public MongoMetadataDaoImpl(Config config) {
@@ -90,7 +95,7 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
 
     private void init() {
         db = client.getDatabase(DB_NAME);
-        IndexOptions io = new IndexOptions().background(true).unique(true).name("nameIndex");
+        IndexOptions io = new IndexOptions().background(true).name("nameIndex");
         BsonDocument doc = new BsonDocument();
         doc.append("name", new BsonInt32(1));
         cluster = db.getCollection("clusters");
@@ -118,21 +123,46 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
             publishmentType.createIndex(doc1, io1);
         }
 
+        // below is for schedule_specs and its splitted collections
+        BsonDocument doc1 = new BsonDocument();
+        IndexOptions io1 = new IndexOptions().background(true).name("versionIndex");
+        doc1.append("version", new BsonInt32(1));
         scheduleStates = db.getCollection("schedule_specs");
+        scheduleStates.createIndex(doc1, io1);
+
+        spoutSpecs = db.getCollection("spoutSpecs");
         {
-            IndexOptions io1 = new IndexOptions().background(true).unique(true).name("nameIndex");
-            BsonDocument doc1 = new BsonDocument();
-            doc1.append("version", new BsonInt32(1));
-            scheduleStates.createIndex(doc1, io1);
+            IndexOptions ioInternal = new IndexOptions().background(true).name("topologyIdIndex");
+            BsonDocument docInternal = new BsonDocument();
+            docInternal.append("topologyId", new BsonInt32(1));
+            spoutSpecs.createIndex(docInternal, ioInternal);
         }
 
-        assignments = db.getCollection("assignments");
+        alertSpecs = db.getCollection("alertSpecs");
         {
-            IndexOptions io1 = new IndexOptions().background(true).unique(true).name("policyNameIndex");
-            BsonDocument doc1 = new BsonDocument();
-            doc1.append("policyName", new BsonInt32(1));
-            assignments.createIndex(doc1, io1);
+            IndexOptions ioInternal = new IndexOptions().background(true).name("topologyNameIndex");
+            BsonDocument docInternal = new BsonDocument();
+            docInternal.append("topologyName", new BsonInt32(1));
+            alertSpecs.createIndex(docInternal, ioInternal);
         }
+
+        groupSpecs = db.getCollection("groupSpecs");
+        groupSpecs.createIndex(doc1, io1);
+
+        publishSpecs = db.getCollection("publishSpecs");
+        publishSpecs.createIndex(doc1, io1);
+
+        policySnapshots = db.getCollection("policySnapshots");
+        policySnapshots.createIndex(doc1, io);
+
+        streamSnapshots = db.getCollection("streamSnapshots");
+        streamSnapshots.createIndex(doc1, io);
+
+        monitoredStreams = db.getCollection("monitoredStreams");
+        monitoredStreams.createIndex(doc1, io);
+
+        assignments = db.getCollection("assignments");
+        assignments.createIndex(doc1, io1);
     }
 
     @Override
@@ -140,22 +170,6 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
         return list(cluster, StreamingCluster.class);
     }
 
-    private <T> List<T> list(MongoCollection<Document> collection, Class<T> clz) {
-        List<T> result = new LinkedList<T>();
-        collection.find().map(new Function<Document, T>() {
-            @Override
-            public T apply(Document t) {
-                String json = t.toJson();
-                try {
-                    return mapper.readValue(json, clz);
-                } catch (IOException e) {
-                    LOG.error("deserialize config item failed!", e);
-                }
-                return null;
-            }
-        }).into(result);
-        return result;
-    }
 
     private <T> OpResult addOrReplace(MongoCollection<Document> collection, T t) {
         BsonDocument filter = new BsonDocument();
@@ -285,6 +299,63 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
         return remove(publishmentType, pubType);
     }
 
+    private <T> OpResult addOne(MongoCollection<Document> collection, T t) {
+        OpResult result = new OpResult();
+        String json = "";
+        try {
+            json = mapper.writeValueAsString(t);
+            collection.insertOne(Document.parse(json));
+            result.code = 200;
+            result.message = String.format("add one document [%s] to collection [%s] succeed!", json, collection.getNamespace());
+            LOG.info(result.message);
+        } catch (Exception e) {
+            result.code = 400;
+            result.message = e.getMessage();
+            LOG.error(String.format("Add one document [%s] to collection [%s] failed!", json, collection.getNamespace()), e);
+        }
+        return result;
+    }
+
+    /**
+     * Due to some field name in SpoutSpec contains dot(.) which is invalid Mongo Field name, we need to transform the
+     * format to store in Mongo.
+     * @return opresult
+     */
+    private <T> OpResult addOneSpoutSpec(T t) {
+        OpResult result = new OpResult();
+        String json = "";
+        try {
+            json = mapper.writeValueAsString(t);
+            Document doc = Document.parse(json);
+
+            String [] metadataMapArrays = {"kafka2TupleMetadataMap", "tuple2StreamMetadataMap", "streamRepartitionMetadataMap"};
+            for (String metadataMapName: metadataMapArrays) {
+                Document _metadataMapDoc = (Document) doc.get(metadataMapName);
+                doc.remove(metadataMapName);
+
+                ArrayList<Document> _metadataMapArray = new ArrayList<>();
+
+                for ( String key : _metadataMapDoc.keySet()) {
+                    Document _subDoc = new Document();
+                    _subDoc.put("topicName", key);
+                    _subDoc.put(metadataMapName, _metadataMapDoc.get(key));
+                    _metadataMapArray.add(_subDoc);
+                }
+                doc.append(metadataMapName, _metadataMapArray);
+            }
+
+            spoutSpecs.insertOne(doc);
+            result.code = 200;
+            result.message = String.format("add one document [%s] to collection [%s] succeed!", doc.toJson(), spoutSpecs.getNamespace());
+            LOG.info(result.message);
+        } catch (Exception e) {
+            result.code = 400;
+            result.message = e.getMessage();
+            LOG.error(String.format("Add one document [%s] to collection [%s] failed!", json, spoutSpecs.getNamespace()), e);
+        }
+        return result;
+    }
+
     @Override
     public ScheduleState getScheduleState(String versionId) {
         BsonDocument doc = new BsonDocument();
@@ -301,29 +372,20 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
                 return null;
             }
         }).first();
+
+        if (state != null) {
+            // based on version, to add content from collections of spoutSpecs/alertSpecs/etc..
+            state = addDetailForScheduleState(state, versionId);
+        }
+
         return state;
     }
 
-    @Override
-    public OpResult addScheduleState(ScheduleState state) {
-        return addOne(scheduleStates, state);
-    }
-
-    private <T> OpResult addOne(MongoCollection<Document> collection, T t) {
-        OpResult result = new OpResult();
-        try {
-            String json = mapper.writeValueAsString(t);
-            collection.insertOne(Document.parse(json));
-            result.code = 200;
-            result.message = "add state succeed!";
-        } catch (Exception e) {
-            result.code = 400;
-            result.message = e.getMessage();
-            LOG.error("", e);
-        }
-        return result;
-    }
-
+    /**
+     * get the basic ScheduleState, and then based on the version to get all sub-part(spoutSpecs/alertSpecs/etc)
+     * to form a completed ScheduleState.
+     * @return the latest ScheduleState
+     */
     @Override
     public ScheduleState getScheduleState() {
         BsonDocument sort = new BsonDocument();
@@ -340,7 +402,197 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
                 return null;
             }
         }).first();
+
+        if (state != null) {
+            String version = state.getVersion();
+            // based on version, to add content from collections of spoutSpecs/alertSpecs/etc..
+            state = addDetailForScheduleState(state, version);
+        }
+
         return state;
+    }
+
+    private ScheduleState addDetailForScheduleState(ScheduleState state, String version) {
+        Map<String, SpoutSpec> spoutMaps = maps(spoutSpecs, SpoutSpec.class, version);
+        if (spoutMaps.size() != 0) {
+            state.setSpoutSpecs(spoutMaps);
+        }
+
+        Map<String, AlertBoltSpec> alertMaps = maps(alertSpecs, AlertBoltSpec.class, version);
+        if (alertMaps.size() != 0) {
+            state.setAlertSpecs(alertMaps);
+        }
+
+        Map<String, RouterSpec> groupMaps = maps(groupSpecs, RouterSpec.class, version);
+        if (groupMaps.size() != 0) {
+            state.setGroupSpecs(groupMaps);
+        }
+
+        Map<String, PublishSpec> publishMaps = maps(publishSpecs, PublishSpec.class, version);
+        if (publishMaps.size() != 0) {
+            state.setPublishSpecs(publishMaps);
+        }
+
+        List<VersionedPolicyDefinition> policyLists = list(policySnapshots, VersionedPolicyDefinition.class, version);
+        if (policyLists.size() != 0) {
+            state.setPolicySnapshots(policyLists);
+        }
+
+        List<VersionedStreamDefinition> streamLists = list(streamSnapshots, VersionedStreamDefinition.class, version);
+        if (streamLists.size() != 0) {
+            state.setStreamSnapshots(streamLists);
+        }
+
+        List<MonitoredStream> monitorLists = list(monitoredStreams, MonitoredStream.class, version);
+        if (monitorLists.size() != 0) {
+            state.setMonitoredStreams(monitorLists);
+        }
+
+        List<PolicyAssignment> assignmentLists = list(assignments, PolicyAssignment.class, version);
+        if (assignmentLists.size() != 0) {
+            state.setAssignments(assignmentLists);
+        }
+        return state;
+    }
+
+    private <T> Map<String, T> maps(MongoCollection<Document> collection, Class<T> clz, String version) {
+        BsonDocument doc = new BsonDocument();
+        doc.append("version", new BsonString(version));
+
+        Map<String, T> maps = new HashMap<String, T>();
+        String mapKey = (clz == SpoutSpec.class) ? "topologyId" : "topologyName";
+        collection.find(doc).forEach(new Block<Document>() {
+            @Override
+            public void apply(Document document) {
+                String json = document.toJson();
+                try {
+                    //Due to some field name in SpoutSpec contains dot(.) which is invalid Mongo Field name,
+                    // we need to transform the format while reading from Mongo.
+                    if (clz == SpoutSpec.class) {
+                        Document doc = Document.parse(json);
+                        String [] metadataMapArrays = {"kafka2TupleMetadataMap", "tuple2StreamMetadataMap", "streamRepartitionMetadataMap"};
+                        for (String metadataMapName: metadataMapArrays) {
+                            ArrayList<Document> subDocs = (ArrayList) doc.get(metadataMapName);
+                            doc.remove(metadataMapName);
+
+                            Document replaceDoc = new Document();
+                            for ( Document subDoc : subDocs) {
+                                replaceDoc.put((String) subDoc.get("topicName"), subDoc.get(metadataMapName));
+                            }
+                            doc.put(metadataMapName, replaceDoc);
+                        }
+
+                        json = doc.toJson();
+                    }
+                    T t = mapper.readValue(json, clz);
+                    maps.put(document.getString(mapKey), t);
+                } catch (IOException e) {
+                    LOG.error("deserialize config item failed!", e);
+                }
+            }
+        });
+
+        return maps;
+    }
+
+    private <T> List<T> list(MongoCollection<Document> collection, Class<T> clz, String version) {
+        BsonDocument doc = new BsonDocument();
+        doc.append("version", new BsonString(version));
+
+        List<T> result = new LinkedList<T>();
+        collection.find(doc).map(new Function<Document, T>() {
+            @Override
+            public T apply(Document t) {
+                String json = t.toJson();
+                try {
+                    return mapper.readValue(json, clz);
+                } catch (IOException e) {
+                    LOG.error("deserialize config item failed!", e);
+                }
+                return null;
+            }
+        }).into(result);
+        return result;
+    }
+
+    private <T> List<T> list(MongoCollection<Document> collection, Class<T> clz) {
+        List<T> result = new LinkedList<T>();
+        collection.find().map(new Function<Document, T>() {
+            @Override
+            public T apply(Document t) {
+                String json = t.toJson();
+                try {
+                    return mapper.readValue(json, clz);
+                } catch (IOException e) {
+                    LOG.error("deserialize config item failed!", e);
+                }
+                return null;
+            }
+        }).into(result);
+        return result;
+    }
+
+    /**
+     * write ScheduleState to several collections. basic info writes to ScheduleState, other writes to collections
+     * named by spoutSpecs/alertSpecs/etc.
+     *
+     * @param state
+     * @return
+     */
+    @Override
+    public OpResult addScheduleState(ScheduleState state) {
+        OpResult result = new OpResult();
+        try {
+            for (String key : state.getSpoutSpecs().keySet()) {
+                SpoutSpec spoutSpec = state.getSpoutSpecs().get(key);
+                addOneSpoutSpec(spoutSpec);
+            }
+
+            for (String key : state.getAlertSpecs().keySet()) {
+                AlertBoltSpec alertBoltSpec = state.getAlertSpecs().get(key);
+                addOne(alertSpecs, alertBoltSpec);
+            }
+
+            for (String key : state.getGroupSpecs().keySet()) {
+                RouterSpec groupSpec = state.getGroupSpecs().get(key);
+                addOne(groupSpecs, groupSpec);
+            }
+
+            for (String key : state.getPublishSpecs().keySet()) {
+                PublishSpec publishSpec = state.getPublishSpecs().get(key);
+                addOne(publishSpecs, publishSpec);
+            }
+
+            for (VersionedPolicyDefinition policySnapshot : state.getPolicySnapshots()) {
+                addOne(policySnapshots, policySnapshot);
+            }
+
+            for (VersionedStreamDefinition streamSnapshot : state.getStreamSnapshots()) {
+                addOne(streamSnapshots, streamSnapshot);
+            }
+
+            for (MonitoredStream monitoredStream : state.getMonitoredStreams()) {
+                addOne(monitoredStreams, monitoredStream);
+            }
+
+            for (PolicyAssignment assignment : state.getAssignments()) {
+                addOne(assignments, assignment);
+            }
+
+            ScheduleStateBase stateBase = new ScheduleStateBase(
+                    state.getVersion(), state.getGenerateTime(), state.getCode(),
+                    state.getMessage(), state.getScheduleTimeMillis());
+
+            addOne(scheduleStates, stateBase);
+
+            result.code = 200;
+            result.message = "add document to collection schedule_specs succeed";
+        } catch (Exception e) {
+            result.code = 400;
+            result.message = e.getMessage();
+            LOG.error("", e);
+        }
+        return result;
     }
 
     @Override
@@ -387,4 +639,5 @@ public class MongoMetadataDaoImpl implements IMetadataDao {
     public void close() throws IOException {
         client.close();
     }
+
 }

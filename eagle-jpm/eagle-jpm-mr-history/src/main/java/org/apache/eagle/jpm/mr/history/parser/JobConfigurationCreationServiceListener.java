@@ -18,9 +18,9 @@
 
 package org.apache.eagle.jpm.mr.history.parser;
 
-import org.apache.eagle.jpm.mr.history.common.JHFConfigManager;
-import org.apache.eagle.jpm.mr.history.entities.JobBaseAPIEntity;
-import org.apache.eagle.jpm.mr.history.entities.JobConfigurationAPIEntity;
+import org.apache.eagle.jpm.mr.history.MRHistoryJobConfig;
+import org.apache.eagle.jpm.mr.historyentity.JobBaseAPIEntity;
+import org.apache.eagle.jpm.mr.historyentity.JobConfigurationAPIEntity;
 import org.apache.eagle.service.client.IEagleServiceClient;
 import org.apache.eagle.service.client.impl.EagleServiceClientImpl;
 import org.slf4j.Logger;
@@ -32,18 +32,16 @@ import java.util.List;
 public class JobConfigurationCreationServiceListener implements HistoryJobEntityLifecycleListener {
     private static final Logger logger = LoggerFactory.getLogger(JobConfigurationCreationServiceListener.class);
     private static final int MAX_RETRY_TIMES = 3;
-    private JHFConfigManager configManager;
-    private JobConfigurationAPIEntity m_jobConfigurationEntity;
+    private JobConfigurationAPIEntity jobConfigurationEntity;
 
-    public JobConfigurationCreationServiceListener(JHFConfigManager configManager) {
-        this.configManager = configManager;
+    public JobConfigurationCreationServiceListener() {
     }
 
     @Override
     public void jobEntityCreated(JobBaseAPIEntity entity) throws Exception {
         if (entity != null) {
             if (entity instanceof JobConfigurationAPIEntity) {
-                this.m_jobConfigurationEntity = (JobConfigurationAPIEntity)entity;
+                this.jobConfigurationEntity = (JobConfigurationAPIEntity) entity;
             }
         }
     }
@@ -55,17 +53,15 @@ public class JobConfigurationCreationServiceListener implements HistoryJobEntity
 
     @Override
     public void flush() throws Exception {
-        JHFConfigManager.EagleServiceConfig eagleServiceConfig = configManager.getEagleServiceConfig();
-        JHFConfigManager.JobExtractorConfig jobExtractorConfig = configManager.getJobExtractorConfig();
         IEagleServiceClient client = new EagleServiceClientImpl(
-                eagleServiceConfig.eagleServiceHost,
-                eagleServiceConfig.eagleServicePort,
-                eagleServiceConfig.username,
-                eagleServiceConfig.password);
+            MRHistoryJobConfig.get().getEagleServiceConfig().eagleServiceHost,
+            MRHistoryJobConfig.get().getEagleServiceConfig().eagleServicePort,
+            MRHistoryJobConfig.get().getEagleServiceConfig().username,
+            MRHistoryJobConfig.get().getEagleServiceConfig().password);
 
-        client.getJerseyClient().setReadTimeout(jobExtractorConfig.readTimeoutSeconds * 1000);
+        client.getJerseyClient().setReadTimeout(MRHistoryJobConfig.get().getJobExtractorConfig().readTimeoutSeconds * 1000);
         List<JobConfigurationAPIEntity> list = new ArrayList<>();
-        list.add(m_jobConfigurationEntity);
+        list.add(jobConfigurationEntity);
 
         int tried = 0;
         while (tried <= MAX_RETRY_TIMES) {
@@ -76,17 +72,17 @@ public class JobConfigurationCreationServiceListener implements HistoryJobEntity
                 break;
             } catch (Exception ex) {
                 if (tried < MAX_RETRY_TIMES) {
-                    logger.error("Got exception to flush, retry as " + (tried + 1) +" times",ex);
+                    logger.error("Got exception to flush, retry as " + (tried + 1) + " times", ex);
                 } else {
                     logger.error("Got exception to flush, reach max retry times " + MAX_RETRY_TIMES, ex);
                 }
             } finally {
                 list.clear();
-                m_jobConfigurationEntity = null;
+                jobConfigurationEntity = null;
                 client.getJerseyClient().destroy();
                 client.close();
             }
-            tried ++;
+            tried++;
         }
     }
 }

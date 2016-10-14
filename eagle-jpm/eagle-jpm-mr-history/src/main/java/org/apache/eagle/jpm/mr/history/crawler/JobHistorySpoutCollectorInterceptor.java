@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,19 +18,18 @@
 
 package org.apache.eagle.jpm.mr.history.crawler;
 
+import org.apache.eagle.dataproc.impl.storm.ValuesArray;
 import backtype.storm.spout.SpoutOutputCollector;
-import org.apache.eagle.dataproc.core.EagleOutputCollector;
-import org.apache.eagle.dataproc.core.ValuesArray;
 
 public class JobHistorySpoutCollectorInterceptor implements EagleOutputCollector {
-    private SpoutOutputCollector m_collector;
+    private SpoutOutputCollector collector;
 
     public void setSpoutOutputCollector(SpoutOutputCollector collector) {
-        this.m_collector = collector;
+        this.collector = collector;
     }
 
     @Override
     public void collect(ValuesArray t) {
-        m_collector.emit(t);
+        collector.emit(t);
     }
 }

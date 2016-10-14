@@ -15,8 +15,17 @@
  * limitations under the License.
  */
 package org.apache.eagle.server;
-
+import com.google.inject.Injector;
 import com.hubspot.dropwizard.guice.GuiceBundle;
+import io.dropwizard.lifecycle.Managed;
+import org.apache.eagle.alert.coordinator.CoordinatorListener;
+import org.apache.eagle.alert.resource.SimpleCORSFiler;
+import org.apache.eagle.log.base.taggedlog.EntityJsonModule;
+import org.apache.eagle.log.base.taggedlog.TaggedLogAPIEntity;
+import org.apache.eagle.metadata.service.ApplicationStatusUpdateService;
+import org.apache.eagle.server.managedtask.ApplicationTask;
+import org.apache.eagle.server.module.GuiceBundleLoader;
+
 import com.sun.jersey.api.core.PackagesResourceConfig;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
@@ -24,28 +33,18 @@ import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
 import io.swagger.jaxrs.config.BeanConfig;
 import io.swagger.jaxrs.listing.ApiListingResource;
-import org.apache.eagle.alert.coordinator.CoordinatorListener;
-import org.apache.eagle.alert.resource.SimpleCORSFiler;
-import org.apache.eagle.app.ApplicationGuiceModule;
-import org.apache.eagle.common.module.CommonGuiceModule;
-import org.apache.eagle.metadata.persistence.MetadataStore;
 
-import javax.servlet.DispatcherType;
 import java.util.EnumSet;
+import javax.servlet.DispatcherType;
 
 class ServerApplication extends Application<ServerConfig> {
-    private GuiceBundle<ServerConfig> guiceBundle;
+    private GuiceBundle guiceBundle;
 
     @Override
     public void initialize(Bootstrap<ServerConfig> bootstrap) {
-        guiceBundle = GuiceBundle.<ServerConfig>newBuilder()
-                .addModule(new CommonGuiceModule())
-                .addModule(MetadataStore.getInstance())
-                .addModule(new ApplicationGuiceModule())
-                .setConfigClass(ServerConfig.class)
-                .build();
+        guiceBundle = GuiceBundleLoader.load();
         bootstrap.addBundle(guiceBundle);
-        bootstrap.addBundle(new AssetsBundle("/assets","/","index.html","/"));
+        bootstrap.addBundle(new AssetsBundle("/assets", "/", "index.html", "/"));
     }
 
     @Override
@@ -58,6 +57,8 @@ class ServerApplication extends Application<ServerConfig> {
         environment.getApplicationContext().setContextPath(ServerConfig.getContextPath());
         environment.jersey().register(RESTExceptionMapper.class);
         environment.jersey().setUrlPattern(ServerConfig.getApiBasePath());
+        environment.getObjectMapper().setFilters(TaggedLogAPIEntity.getFilterProvider());
+        environment.getObjectMapper().registerModule(new EntityJsonModule());
 
         // Automatically scan all REST resources
         new PackagesResourceConfig(ServerConfig.getResourcePackage()).getClasses().forEach(environment.jersey()::register);
@@ -76,9 +77,15 @@ class ServerApplication extends Application<ServerConfig> {
 
         // Simple CORS filter
         environment.servlets().addFilter(SimpleCORSFiler.class.getName(), new SimpleCORSFiler())
-                .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
+            .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), true, "/*");
 
         // context listener
         environment.servlets().addServletListeners(new CoordinatorListener());
+
+        // run application status service in background
+        Injector injector = guiceBundle.getInjector();
+        ApplicationStatusUpdateService applicationStatusUpdateService = injector.getInstance(ApplicationStatusUpdateService.class);
+        Managed updateAppStatusTask = new ApplicationTask(applicationStatusUpdateService);
+        environment.lifecycle().manage(updateAppStatusTask);
     }
 }

@@ -16,18 +16,18 @@
  */
 package org.apache.eagle.app;
 
+import org.apache.eagle.common.config.ConfigOptionParser;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.commons.cli.ParseException;
-import org.apache.eagle.common.config.ConfigOptionParser;
 
-public interface ApplicationTool<Conf extends Configuration> {
+public interface ApplicationTool {
     /**
-     * Run application through CLI
+     * Run application through CLI.
      *
      * @param args application arguments
      */
-    default void run(String[] args){
+    default void run(String[] args) {
         try {
             run(new ConfigOptionParser().load(args));
         } catch (ParseException e) {
@@ -36,25 +36,9 @@ public interface ApplicationTool<Conf extends Configuration> {
         }
     }
 
-    /**
-     *
-     * @param config
-     */
     void run(Config config);
 
-    /**
-     * @param appConf
-     */
-    void run(Conf appConf, Config envConfig);
-
-    /**
-     * @param appConf
-     */
-    default void run(Conf appConf){
-        run(appConf, ConfigFactory.load());
-    }
-
-    default void run(){
+    default void run() {
         run(ConfigFactory.load());
     }
 }

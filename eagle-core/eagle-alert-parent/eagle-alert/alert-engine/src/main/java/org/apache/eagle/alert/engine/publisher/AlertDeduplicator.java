@@ -17,15 +17,18 @@
  */
 package org.apache.eagle.alert.engine.publisher;
 
+import java.util.List;
+
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 
 /**
  * Dedup Eagle entities.
+ * TODO: need support de-dup field values
  */
 public interface AlertDeduplicator {
 
-	AlertStreamEvent dedup(AlertStreamEvent event);
+    List<AlertStreamEvent> dedup(AlertStreamEvent event);
 
-	void setDedupIntervalMin(String intervalMin);
+    void setDedupIntervalMin(String intervalMin);
 
 }

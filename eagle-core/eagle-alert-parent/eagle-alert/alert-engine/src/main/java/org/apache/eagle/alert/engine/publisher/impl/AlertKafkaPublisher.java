@@ -19,6 +19,7 @@
 package org.apache.eagle.alert.engine.publisher.impl;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -57,41 +58,14 @@ public class AlertKafkaPublisher extends AbstractPublishPlugin {
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
     @Override
     public void onAlert(AlertStreamEvent event) throws Exception {
         if (producer == null) {
             LOG.warn("KafkaProducer is null due to the incorrect configurations");
             return;
         }
-        event = dedup(event);
-        if(event == null) {
-            return;
-        }
-        PublishStatus status = new PublishStatus();
-        try {
-            ProducerRecord record = createRecord(event, topic);
-            if (record == null) {
-                LOG.error(" Alert serialize return null, ignored message! ");
-                return;
-            }
-            Future<?> future = producer.send(record);
-            future.get(MAX_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-            status.successful = true;
-            status.errorMessage = "";
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Successfully send message to Kafka: " + brokerList);
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            status.successful = false;
-            status.errorMessage = String.format("Failed to send message to %s, due to:%s", brokerList, e);
-            LOG.error(status.errorMessage, e);
-        } catch (Exception ex ) {
-            LOG.error("fail writing alert to Kafka bus", ex);
-            status.successful = false;
-            status.errorMessage = ex.getMessage();
-        }
-        this.status = status;
+
+        this.emit(this.topic, this.dedup(event));
     }
 
     @SuppressWarnings("rawtypes")
@@ -117,6 +91,51 @@ public class AlertKafkaPublisher extends AbstractPublishPlugin {
     @Override
     public void close() {
         producer.close();
+    }
+
+    @SuppressWarnings( {"rawtypes", "unchecked"})
+    protected PublishStatus emit(String topic, List<AlertStreamEvent> outputEvents) {
+        // we need to check producer here since the producer is invisable to extended kafka publisher
+        if (producer == null) {
+            LOG.warn("KafkaProducer is null due to the incorrect configurations");
+            return null;
+        }
+        if (outputEvents == null) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Alert stream events list in publishment is empty");
+            }
+            return null;
+        }
+        this.status = new PublishStatus();
+        try {
+            for (AlertStreamEvent outputEvent : outputEvents) {
+                ProducerRecord record = createRecord(outputEvent, topic);
+                if (record == null) {
+                    LOG.error("Alert serialize return null, ignored message! ");
+                    return null;
+                }
+                Future<?> future = producer.send(record);
+                future.get(MAX_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            }
+            status.successful = true;
+            status.errorMessage = "";
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("Successfully send message to Kafka: " + brokerList);
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            status.successful = false;
+            status.errorMessage = String.format("Failed to send message to %s, due to:%s", brokerList, e);
+            LOG.error(status.errorMessage, e);
+        } catch (Exception ex) {
+            LOG.error("fail writing alert to Kafka bus", ex);
+            status.successful = false;
+            status.errorMessage = ex.getMessage();
+        }
+        return status;
+    }
+
+    protected String getTopic() {
+        return this.topic;
     }
 
     private ProducerRecord<String, Object> createRecord(AlertStreamEvent event, String topic) throws Exception {

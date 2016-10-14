@@ -1,10 +1,10 @@
 package org.apache.eagle.alert.engine.serialization.impl;
 
+import org.apache.eagle.alert.engine.serialization.Serializer;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-
-import org.apache.eagle.alert.engine.serialization.Serializer;
 
 /**
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -22,14 +22,17 @@ import org.apache.eagle.alert.engine.serialization.Serializer;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-public class FloatSerializer implements Serializer<Float> {
+public class FloatSerializer implements Serializer<Object> {
     @Override
-    public void serialize(Float value, DataOutput dataOutput) throws IOException {
-        dataOutput.writeFloat(value);
+    public void serialize(Object value, DataOutput dataOutput) throws IOException {
+        if (value instanceof Number) {
+            value = ((Number)value).floatValue();
+        }
+        dataOutput.writeFloat((float)value);
     }
 
     @Override
-    public Float deserialize(DataInput dataInput) throws IOException {
+    public Object deserialize(DataInput dataInput) throws IOException {
         return dataInput.readFloat();
     }
 }

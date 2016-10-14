@@ -29,16 +29,19 @@ public class HDFSUtil {
 
     public static FileSystem getFileSystem(Configuration conf) throws IOException {
         HDFSUtil.login(conf);
-       return FileSystem.get(conf);
+        return FileSystem.get(conf);
     }
 
     public static void login(Configuration kConfig) throws IOException {
-        if(kConfig.get("hdfs.kerberos.principal") == null || kConfig.get("hdfs.kerberos.principal").isEmpty()){
+        if (kConfig.get("hdfs.kerberos.principal") == null || kConfig.get("hdfs.kerberos.principal").isEmpty()) {
+            if (kConfig.get("hadoop.job.ugi") != null) {
+                System.setProperty("HADOOP_USER_NAME", kConfig.get("hadoop.job.ugi"));
+            }
             return;
         }
-       kConfig.setBoolean("hadoop.security.authorization", true);
-       kConfig.set("hadoop.security.authentication", "kerberos");
-       UserGroupInformation.setConfiguration(kConfig);
-       UserGroupInformation.loginUserFromKeytab(kConfig.get("hdfs.kerberos.principal"), kConfig.get("hdfs.keytab.file"));
-     }
+        kConfig.setBoolean("hadoop.security.authorization", true);
+        kConfig.set("hadoop.security.authentication", "kerberos");
+        UserGroupInformation.setConfiguration(kConfig);
+        UserGroupInformation.loginUserFromKeytab(kConfig.get("hdfs.kerberos.principal"), kConfig.get("hdfs.keytab.file"));
+    }
 }

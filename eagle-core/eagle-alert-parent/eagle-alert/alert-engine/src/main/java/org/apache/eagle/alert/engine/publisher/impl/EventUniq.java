@@ -16,42 +16,68 @@
  *
  */
 /**
- * 
+ *
  */
 package org.apache.eagle.alert.engine.publisher.impl;
 
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
+import com.google.common.base.Joiner;
+
+import java.util.HashMap;
+
 /**
- * @since Mar 19, 2015
+ * @since Mar 19, 2015.
  */
 public class EventUniq {
-	public String streamId;
-	public String policyId;
-	public Long timestamp;	 // event's createTimestamp
-	public long createdTime; // created time, for cache removal;
+    public String streamId;
+    public String policyId;
+    public Long timestamp;     // event's createTimestamp
+    public long createdTime; // created time, for cache removal;
+    public HashMap<String, String> customFieldValues;
+    public boolean removable = false;
 
-	public EventUniq(String streamId, String policyId, long timestamp) {
-		this.streamId = streamId;
-		this.timestamp = timestamp;
-		this.policyId = policyId;
-		this.createdTime = System.currentTimeMillis();
-	}
+    public EventUniq(String streamId, String policyId, long timestamp) {
+        this.streamId = streamId;
+        this.timestamp = timestamp;
+        this.policyId = policyId;
+        this.createdTime = System.currentTimeMillis();
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (obj instanceof EventUniq) {
-			EventUniq au = (EventUniq) obj;
-			return (this.streamId.equalsIgnoreCase(au.streamId) & this.policyId.equalsIgnoreCase(au.policyId));
-		}
-		return false;
-	}
+    public EventUniq(String streamId, String policyId, long timestamp, HashMap<String, String> customFieldValues) {
+        this.streamId = streamId;
+        this.timestamp = timestamp;
+        this.policyId = policyId;
+        this.createdTime = System.currentTimeMillis();
+        this.customFieldValues = customFieldValues;
+    }
 
-	@Override
-	public int hashCode() {
-		return new HashCodeBuilder()
-				.append(streamId)
-				.append(policyId)
-				.build();
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof EventUniq) {
+            EventUniq au = (EventUniq) obj;
+            boolean result = this.streamId.equalsIgnoreCase(au.streamId) & this.policyId.equalsIgnoreCase(au.policyId);
+            if (this.customFieldValues != null && au.customFieldValues != null) {
+                result = result & this.customFieldValues.equals(au.customFieldValues);
+            }
+            return result;
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        HashCodeBuilder builder = new HashCodeBuilder().append(streamId).append(policyId);
+
+        if (customFieldValues != null) {
+            builder.append(customFieldValues);
+        }
+        return builder.build();
+    }
+
+    @Override
+    public String toString() {
+        return String.format("EventUniq[streamId: %s, policyId: %s, timestamp: %s, removable: %s, customFieldValues: %s]",
+            streamId, policyId, timestamp, removable, Joiner.on(",").withKeyValueSeparator(">").join(customFieldValues));
+    }
 }

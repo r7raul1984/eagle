@@ -16,15 +16,22 @@
  */
 package org.apache.eagle.app.environment;
 
-import com.typesafe.config.Config;
 import org.apache.eagle.app.sink.StreamSinkProvider;
+import com.typesafe.config.Config;
 
 import java.io.Serializable;
 
 /**
- * Execution Environment Context
+ * Execution Environment Context.
  */
-public interface Environment extends Serializable{
+public interface Environment extends Serializable {
+
     Config config();
+
+    /**
+     * TODO Only useful for Storm/Spark Exeuctable Application instead of static web application.
+     *
+     * @return StreamSinkProvider.
+     */
     StreamSinkProvider streamSink();
 }

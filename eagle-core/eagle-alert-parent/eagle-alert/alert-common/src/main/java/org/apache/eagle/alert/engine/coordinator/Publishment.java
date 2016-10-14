@@ -19,14 +19,16 @@ package org.apache.eagle.alert.engine.coordinator;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 
 /**
- * @since Apr 11, 2016
- *
+ * @since Apr 11, 2016.
  */
 public class Publishment implements Serializable {
 
@@ -34,6 +36,10 @@ public class Publishment implements Serializable {
     private String type;
     private List<String> policyIds;
     private String dedupIntervalMin;
+    private List<String> dedupFields;
+    private String dedupStateField;
+    private String dedupStateCloseValue;
+    private OverrideDeduplicatorSpec overrideDeduplicator;
     private Map<String, String> properties;
     // the class name to extend the IEventSerializer interface
     private String serializer;
@@ -44,6 +50,30 @@ public class Publishment implements Serializable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDedupStateField() {
+        return dedupStateField;
+    }
+
+    public void setDedupStateField(String dedupStateField) {
+        this.dedupStateField = dedupStateField;
+    }
+
+    public String getDedupStateCloseValue() {
+        return dedupStateCloseValue;
+    }
+
+    public void setDedupStateCloseValue(String dedupStateCloseValue) {
+        this.dedupStateCloseValue = dedupStateCloseValue;
+    }
+
+    public OverrideDeduplicatorSpec getOverrideDeduplicator() {
+        return overrideDeduplicator;
+    }
+
+    public void setOverrideDeduplicator(OverrideDeduplicatorSpec overrideDeduplicator) {
+        this.overrideDeduplicator = overrideDeduplicator;
     }
 
     public String getSerializer() {
@@ -78,6 +108,14 @@ public class Publishment implements Serializable {
         this.dedupIntervalMin = dedupIntervalMin;
     }
 
+    public List<String> getDedupFields() {
+        return dedupFields;
+    }
+
+    public void setDedupFields(List<String> dedupFields) {
+        this.dedupFields = dedupFields;
+    }
+
     public Map<String, String> getProperties() {
         return properties;
     }
@@ -91,8 +129,11 @@ public class Publishment implements Serializable {
         if (obj instanceof Publishment) {
             Publishment p = (Publishment) obj;
             return (Objects.equals(name, p.getName()) && Objects.equals(type, p.getType())
-                    && Objects.equals(dedupIntervalMin, p.getDedupIntervalMin())
-                    && Objects.equals(policyIds, p.getPolicyIds()) && properties.equals(p.getProperties()));
+                && Objects.equals(dedupIntervalMin, p.getDedupIntervalMin())
+                && Objects.equals(dedupFields, p.getDedupFields())
+                && Objects.equals(dedupStateField, p.getDedupStateField())
+                && Objects.equals(overrideDeduplicator, p.getOverrideDeduplicator())
+                && Objects.equals(policyIds, p.getPolicyIds()) && properties.equals(p.getProperties()));
         }
         return false;
     }
@@ -100,14 +141,14 @@ public class Publishment implements Serializable {
     @Override
     public int hashCode() {
         return new HashCodeBuilder().append(name).append(type).append(dedupIntervalMin).append(policyIds)
-                .append(properties).build();
+            .append(properties).build();
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("Publishment[name:").append(name).append(",type:").append(type).append(",policyId:")
-                .append(policyIds).append(",properties:").append(properties);
+            .append(policyIds).append(",properties:").append(properties);
         return sb.toString();
     }
 
