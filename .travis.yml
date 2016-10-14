@@ -13,12 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-env:
-  global:
-  - GH_REF: github.com/1haodian/incubator-eagle.git
 script:
-  - chmod ugo+x deploy.sh
-  - '[ "${TRAVIS_PULL_REQUEST}" != "false" ] || ./deploy.sh'
+  - sudo rm /etc/mavenrc
+  - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
+  - mvn clean test --quiet
 jdk:
   - oraclejdk8
 notifications:
@@ -31,3 +29,6 @@ notifications:
       - denglingang@yhd.com
     on_success: change
     on_failure: always
+cache:
+  directories:
+     - $HOME/.m2
