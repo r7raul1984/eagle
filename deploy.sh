@@ -12,7 +12,6 @@ git status
 echo "Git remote..."
 git remote add upstream https://github.com/apache/incubator-eagle.git
 git remote set-url origin "https://${GH_TOKEN}@${GH_REF}"
-#git branch --set-upstream-to upstream
 
 echo "Set git id..."
 git config  user.name "Travis-CI"
