@@ -13,7 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-language: java
-script: mvn clean test
+env:
+  global:
+  - GH_REF: github.com/1haodian/incubator-eagle.git
+script:
+  - chmod ugo+x deploy.sh
+  - '[ "${TRAVIS_PULL_REQUEST}" != "false" ] || ./deploy.sh'
 jdk:
   - oraclejdk8
+notifications:
+  email:
+    recipients:
+      - chenchang@yhd.com
+      - heju@yhd.com
+      - tangjijun@yhd.com
+      - wangyuming@yhd.com
+      - denglingang@yhd.com
+    on_success: change
+    on_failure: always
