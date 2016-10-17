@@ -16,7 +16,10 @@
 script:
   - sudo rm /etc/mavenrc
   - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
+  - nvm install 4
   - mvn clean test --quiet
+node_js:
+  - "4"
 jdk:
   - oraclejdk8
 notifications:
