@@ -28,16 +28,13 @@ import org.apache.eagle.storage.operation.QueryStatement;
 import org.apache.eagle.storage.operation.RawQuery;
 import org.apache.eagle.storage.result.ModifyResult;
 import org.apache.eagle.storage.result.QueryResult;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
+@Ignore
 public class TestHBaseStatement extends TestHBaseBase {
 
     EntityDefinition entityDefinition;
