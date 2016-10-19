@@ -16,12 +16,11 @@
  */
 package org.apache.eagle.service.hbase;
 
-import org.junit.Ignore;
 import org.junit.Test;
-@Ignore
+
 public class EmbeddedHbaseTest extends TestHBaseBase {
     @Test
     public void testHBaseCreateTable() {
-        hbase.createTable("test_hbase_table","f");
+        // hbase.createTable("test_hbase_table","f");
     }
 }

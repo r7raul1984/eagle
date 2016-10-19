@@ -17,8 +17,6 @@
   -->
 
 <div class="box-body">
-
-
 	<div class="form-group">
 		<label>Site</label>
 		<input type="text" class="form-control" readonly ng-model="siteName">
@@ -28,7 +26,7 @@
 		<textarea class="form-control" readonly ng-model="site.description" rows="2"></textarea>
 	</div>
 
-	<label>Application</label>
+	<label>Applications</label>
 	<span class="text-danger" ng-if="site.applicationList.length === 0">
 		(<span class="fa fa-exclamation-triangle"></span> Site must install at least one application to start up.)
 	</span>
@@ -48,7 +46,7 @@
 				<th>Version</th>
 				<th>Description</th>
 				<!--th>Quick Links</th-->
-				<th width="150">Actions</th>
+				<th width="110">Actions</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -84,7 +82,7 @@
 						</button>
 					</div>
 					<div class="btn-group btn-group-xs" ng-if="!app.installed">
-						<button class="btn btn-primary btn-sm" ng-click="installApp(app)">Install Application</button>
+						<button class="btn btn-primary btn-sm" ng-click="installApp(app)">Install</button>
 					</div>
 				</td>
 			</tr>
@@ -106,9 +104,9 @@
 			</div>
 			<div class="modal-body">
 				<ul class="nav nav-tabs">
-					<li><a href="[data-id='intro']" data-toggle="tab" data-id="introTab">Application</a></li>
-					<li><a href="[data-id='install']" data-toggle="tab">Install</a></li>
-					<li><a href="[data-id='uninstall']" data-toggle="tab">Uninstall</a></li>
+					<li><a href="[data-id='intro']" data-toggle="tab" data-id="introTab">Summary</a></li>
+					<li><a href="[data-id='install']" data-toggle="tab">Installation</a></li>
+					<li><a href="[data-id='uninstall']" data-toggle="tab">Uninstallation</a></li>
 				</ul>
 				<div class="tab-content">
 					<div class="tab-pane" data-id="intro">
@@ -180,10 +178,10 @@
 						</table>
 					</div>
 					<div class="tab-pane" data-id="install">
-						<pre ng-bind-html="installHTML"></pre>
+						<div ng-bind-html="installHTML"></div>
 					</div>
 					<div class="tab-pane" data-id="uninstall">
-						<pre ng-bind-html="uninstallHTML"></pre>
+						<div ng-bind-html="uninstallHTML"></div>
 					</div>
 				</div>
 			</div>
@@ -206,54 +204,110 @@
 			</div>
 			<div class="modal-body">
 				<ul class="nav nav-tabs">
-					<li><a href="[data-id='guide']" data-toggle="tab" data-id="guideTab">Guide</a></li>
-					<li><a href="[data-id='environment']" data-toggle="tab">Environment</a></li>
-					<li><a href="[data-id='configuration']" data-toggle="tab" data-id="configTab">Configuration</a></li>
+					<li><a href="[data-id='guide']" data-toggle="tab" data-id="guideTab">Installation</a></li>
+					<li><a href="[data-id='configuration']" data-toggle="tab" data-id="configTab">Settings</a></li>
 				</ul>
 
 				<div class="tab-content">
 					<div class="tab-pane" data-id="guide">
-						<label>Dependencies</label>
-						<ul>
-							<li ng-repeat="dep in application.dependencies track by $index">
-								<strong class="text-success" ng-if="!!Application.find(dep.type, site.siteId)[0]">[ Installed ]</strong>
-								<strong class="text-danger" ng-if="!Application.find(dep.type, site.siteId)[0]">[
-									<span class="fa fa-exclamation-triangle"></span>Require
-								]</strong>
-								{{Application.findProvider(dep.type).name}}
-								({{dep.type}})
-							</li>
-						</ul>
+						<div ng-bind-html="installHTML"></div>
 
-						<label>Install</label>
-						<pre ng-bind-html="installHTML"></pre>
-					</div>
-
-					<div class="tab-pane" data-id="environment">
-						<div class="form-group">
-							<label>Mode</label>
-							<select class="form-control" ng-model="tmpApp.mode">
-								<option>CLUSTER</option>
-								<option>LOCAL</option>
-							</select>
-						</div>
-						<div class="form-group">
-							<label>jar Path</label>
-							<input type="text" class="form-control" ng-model="tmpApp.jarPath" ng-change="checkJarPath()" />
+						<div ng-if="application.dependencies.length > 0">
+							<label>Dependencies ({{application.dependencies.length}} Apps)</label>
+							<ul>
+								<li ng-repeat="dep in application.dependencies track by $index">
+									<strong class="text-success" ng-if="!!Application.find(dep.type, site.siteId)[0]">[ Installed ]</strong>
+									<strong class="text-danger" ng-if="!Application.find(dep.type, site.siteId)[0]">[
+										<span class="fa fa-exclamation-triangle"></span>Missing
+									]</strong>
+									{{Application.findProvider(dep.type).name}}
+									({{dep.type}})
+								</li>
+							</ul>
 						</div>
 					</div>
 
 					<div class="tab-pane" data-id="configuration">
-						<div class="form-group" ng-class="{'has-warning': field.required && !tmpApp.configuration[field.name]}" ng-repeat="field in tmpAppConfigFields track by $index">
-							<label>
-								<a class="fa fa-times" ng-click="removeField(field)" ng-if="field._customize"></a>
-								{{field.displayName || field.name}}
-								<span class="fa fa-question-circle" ng-if="field.description" uib-tooltip="{{field.description}}"></span>
-								<small ng-if="!field.required" class="text-muted">[optional]</small>
-							</label>
-							<input type="text" class="form-control" placeholder="{{field.description}}" ng-model="tmpApp.configuration[field.name]" />
+						<!-- Environment -->
+						<h5>
+							<a class="text-primary" data-toggle="collapse" href="[data-id='appEnvironment']" ng-click="collapseCheck()">
+								<span class="fa {{isCollapsed('appEnvironment') ? 'fa-chevron-circle-right' : 'fa-chevron-circle-down'}}"></span>
+								Environment
+							</a>
+						</h5>
+						<div data-id="appEnvironment" class="collapse in">
+							<div class="form-group">
+								<label>Execution Mode
+									<span class="fa fa-question-circle" uib-tooltip="Application execution mode: LOCAL/CLUSTER"></span>
+								</label>
+								<select class="form-control" ng-model="tmpApp.mode">
+									<option value="CLUSTER">Submit as Cluster Mode</option>
+									<option VALUE="LOCAL">Submit as Local Mode</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label>Execution File
+									<span class="fa fa-question-circle" uib-tooltip="Full path of Application Jar or Class file on eagle server host"></span>
+								</label>
+								<input type="text" class="form-control" ng-model="tmpApp.jarPath" ng-change="checkJarPath()" />
+							</div>
 						</div>
-						<a ng-click="newField()">+ New Field</a>
+
+						<hr/>
+
+						<!-- General -->
+						<a class="pull-right" ng-click="configByJSON()">Import Configs</a>
+						<h5>
+							<a class="text-primary" data-toggle="collapse" href="[data-id='appGeneral']" ng-click="collapseCheck()">
+								<span class="fa {{isCollapsed('appGeneral') ? 'fa-chevron-circle-right' : 'fa-chevron-circle-down'}}"></span>
+								General
+							</a>
+						</h5>
+						<div data-id="appGeneral" class="collapse in">
+							<span class="text-muted" ng-if="generalFields.length === 0">N/A</span>
+							<div class="form-group" ng-class="{'has-warning': !tmpApp.configuration[field.name]}" ng-repeat="field in generalFields track by $index">
+								<label>
+									{{field.displayName || field.name}}
+									<span class="fa fa-question-circle" ng-if="field.description" uib-tooltip="{{field.description}} ({{field.name}})"></span>
+								</label>
+								<input type="text" class="form-control" placeholder="{{field.description}}" ng-model="tmpApp.configuration[field.name]" />
+							</div>
+						</div>
+
+						<!-- Advanced -->
+						<h5>
+							<a class="text-primary" data-toggle="collapse" href="[data-id='appAdvanced']" ng-click="collapseCheck()">
+								<span class="fa {{isCollapsed('appAdvanced') ? 'fa-chevron-circle-right' : 'fa-chevron-circle-down'}}"></span>
+								Advanced
+							</a>
+						</h5>
+						<div data-id="appAdvanced" class="collapse in">
+							<span class="text-muted" ng-if="advancedFields.length === 0">N/A</span>
+							<div class="form-group" ng-repeat="field in advancedFields track by $index">
+								<label>
+									{{field.displayName || field.name}}
+									<span class="fa fa-question-circle" ng-if="field.description" uib-tooltip="{{field.description}} ({{field.name}})"></span>
+								</label>
+								<input type="text" class="form-control" placeholder="{{field.description}}" ng-model="tmpApp.configuration[field.name]" />
+							</div>
+						</div>
+
+						<h5>
+							<a class="text-primary" data-toggle="collapse" href="[data-id='appCustomize']" ng-click="collapseCheck()">
+								<span class="fa {{isCollapsed('appCustomize') ? 'fa-chevron-circle-right' : 'fa-chevron-circle-down'}}"></span>
+								Custom
+							</a>
+						</h5>
+						<div data-id="appCustomize" class="collapse in">
+							<div class="form-group" ng-class="{'has-warning': !tmpApp.configuration[field.name]}" ng-repeat="field in customizeFields track by $index">
+								<label>
+									<a class="fa fa-times" ng-click="removeField(field)" ng-if="field._customize"></a>
+									{{field.displayName || field.name}}
+								</label>
+								<input type="text" class="form-control" placeholder="{{field.description}}" ng-model="tmpApp.configuration[field.name]" />
+							</div>
+							<a ng-click="newField()">+ Add Property</a>
+						</div>
 					</div>
 				</div>
 			</div>
