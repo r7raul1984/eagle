@@ -74,11 +74,10 @@ public class MRJobParser implements Runnable {
     private MRRunningJobManager runningJobManager;
     private ParserStatus parserStatus;
     private ResourceFetcher rmResourceFetcher;
-    private boolean first;
     private Set<String> finishedTaskIds;
     private List<String> configKeys;
-    private MRRunningJobConfig.EndpointConfig endpointConfig;
-    private static final int TOP_BOTTOM_TASKS_BY_ELASPED_TIME = 10;
+    private static final int TOP_BOTTOM_TASKS_BY_ELAPSED_TIME = 10;
+    private static final int FLUSH_TASKS_EVERY_TIME = 5;
 
     static {
         OBJ_MAPPER.configure(JsonParser.Feature.ALLOW_NON_NUMERIC_NUMBERS, true);
@@ -89,7 +88,6 @@ public class MRJobParser implements Runnable {
                        AppInfo app, Map<String, JobExecutionAPIEntity> mrJobMap,
                        MRRunningJobManager runningJobManager, ResourceFetcher rmResourceFetcher,
                        List<String> configKeys) {
-        this.endpointConfig = endpointConfig;
         this.app = app;
         this.mrJobEntityMap = new HashMap<>();
         this.mrJobEntityMap = mrJobMap;
@@ -106,7 +104,6 @@ public class MRJobParser implements Runnable {
         this.runningJobManager = runningJobManager;
         this.parserStatus  = ParserStatus.FINISHED;
         this.rmResourceFetcher = rmResourceFetcher;
-        this.first = true;
         this.finishedTaskIds = new HashSet<>();
         this.configKeys = configKeys;
     }
@@ -150,11 +147,10 @@ public class MRJobParser implements Runnable {
         List<Function<String, Boolean>> functions = new ArrayList<>();
         functions.add(fetchJobConfig);
         functions.add(fetchJobCounters);
-        if (!this.first) { //do not fetch these info below for the first time
+        if ((int)(Math.random() * 10) % FLUSH_TASKS_EVERY_TIME == 0) {
             functions.add(fetchTasks);
         }
 
-        this.first = false;
         for (String jobId : mrJobEntityMap.keySet()) {
             for (Function<String, Boolean> function : functions) {
                 int i = 0;
@@ -394,6 +390,17 @@ public class MRJobParser implements Runnable {
         return null;
     };
 
+    private void needFetchAttemptTasks(Iterator<MRTask> taskIterator, Set<String> needFetchAttemptTasks) {
+        int i = 0;
+        while (taskIterator.hasNext() && i < TOP_BOTTOM_TASKS_BY_ELAPSED_TIME) {
+            MRTask mrTask = taskIterator.next();
+            if (mrTask.getElapsedTime() > 0) {
+                i++;
+                needFetchAttemptTasks.add(mrTask.getId());
+            }
+        }
+    }
+
     private Set<String> calcFetchCounterAndAttemptTaskId(List<MRTask> tasks) {
         Set<String> needFetchAttemptTasks = new HashSet<>();
         //1, sort by elapsedTime
@@ -403,38 +410,20 @@ public class MRJobParser implements Runnable {
         Iterator<MRTask> taskIteratorIncrease = tasks.stream()
             .filter(task -> task.getState().equals(Constants.TaskState.SUCCEEDED.toString()))
             .sorted(byElapsedTimeIncrease).iterator();
-        int i = 0;
-        while (taskIteratorIncrease.hasNext() && i < TOP_BOTTOM_TASKS_BY_ELASPED_TIME) {
-            MRTask mrTask = taskIteratorIncrease.next();
-            if (mrTask.getElapsedTime() > 0) {
-                i++;
-                needFetchAttemptTasks.add(mrTask.getId());
-            }
-        }
+        needFetchAttemptTasks(taskIteratorIncrease, needFetchAttemptTasks);
+
         //3, fetch finished top n
         Iterator<MRTask> taskIteratorDecrease = tasks.stream()
             .filter(task -> task.getState().equals(Constants.TaskState.SUCCEEDED.toString()))
             .sorted(byElapsedTimeDecrease).iterator();
-        i = 0;
-        while (taskIteratorDecrease.hasNext() && i < TOP_BOTTOM_TASKS_BY_ELASPED_TIME) {
-            MRTask mrTask = taskIteratorDecrease.next();
-            if (mrTask.getElapsedTime() > 0) {
-                i++;
-                needFetchAttemptTasks.add(mrTask.getId());
-            }
-        }
+        needFetchAttemptTasks(taskIteratorDecrease, needFetchAttemptTasks);
+
         //4, fetch running top n
         taskIteratorDecrease = tasks.stream()
             .filter(task -> task.getState().equals(Constants.TaskState.RUNNING.toString()))
             .sorted(byElapsedTimeDecrease).iterator();
-        i = 0;
-        while (taskIteratorDecrease.hasNext() && i < TOP_BOTTOM_TASKS_BY_ELASPED_TIME) {
-            MRTask mrTask = taskIteratorDecrease.next();
-            if (mrTask.getElapsedTime() > 0) {
-                i++;
-                needFetchAttemptTasks.add(mrTask.getId());
-            }
-        }
+        needFetchAttemptTasks(taskIteratorDecrease, needFetchAttemptTasks);
+
         return needFetchAttemptTasks;
     }
 

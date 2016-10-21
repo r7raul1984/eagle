@@ -18,14 +18,14 @@
 
 <application>
     <type>MR_RUNNING_JOB_APP</type>
-    <name>Map Reduce Running Job Monitoring</name>
+    <name>Map Reduce Running Job</name>
     <version>0.5.0-incubating</version>
     <configuration>
         <property>
             <name>workers</name>
             <displayName>Worker Number</displayName>
             <description>the number of storm workers will be used</description>
-            <value>4</value>
+            <value>3</value>
         </property>
         <property>
             <name>stormConfig.mrRunningJobFetchSpoutTasks</name>
@@ -39,15 +39,6 @@
             <description>number of tasks to parse map reduce running jobs got from resource manager</description>
             <value>5</value>
         </property>
-
-        <property>
-            <name>zookeeper.zkRoot</name>
-            <displayName>Zookeeper Root Path</displayName>
-            <description>zkRoot that used to save context for this application</description>
-            <value>/apps/mr/runningSandbox</value>
-            <required>true</required>
-        </property>
-
         <property>
             <name>endpointConfig.fetchRunningJobInterval</name>
             <displayName>Interval of Fetch Running Job From Resource Manager</displayName>
@@ -58,7 +49,7 @@
             <name>endpointConfig.parseJobThreadPoolSize</name>
             <displayName>Parse Job ThreadPool Size in Each Parse Task</displayName>
             <description>parse job thread pool size in each parse task</description>
-            <value>5</value>
+            <value>2</value>
         </property>
         <property>
             <name>endpointConfig.rmUrls</name>
