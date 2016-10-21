@@ -188,4 +188,8 @@ public class StreamRouterImpl implements StreamRouter {
     public Map<StreamPartition,StreamSortHandler> getAllStreamSortHandlerMap() {
         return this.streamSortHandlers;
     }
+
+    public void closeClock() {
+        streamTimeClockManager.close();
+    }
 }

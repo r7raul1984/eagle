@@ -55,7 +55,7 @@ public class AlertPublisherImpl implements AlertPublisher {
             AlertPublishPlugin plugin = AlertPublishPluginsFactory.createNotificationPlugin(publishment, config, conf);
             if (plugin != null) {
                 publishPluginMapping.put(publishment.getName(), plugin);
-                //addPublishmentPolicies(publishment.getPolicyIds(), publishment.getName());
+                addPublishmentPolicies(policyPublishPluginMapping,publishment.getPolicyIds(), publishment.getName());
             } else {
                 LOG.error("Initialized alertPublisher {} failed due to invalid format", publishment);
             }
@@ -195,17 +195,6 @@ public class AlertPublisherImpl implements AlertPublisher {
         }
     }
 
-    private void addPublishmentPolicies(Map<String, List<String>> newPolicyPublishPluginMapping, List<String> addedPolicyIds, String pubName) {
-        if (addedPolicyIds == null || pubName == null) {
-            return;
-        }
-
-        for (String policyId : addedPolicyIds) {
-            newPolicyPublishPluginMapping.putIfAbsent(policyId, new ArrayList<>());
-            newPolicyPublishPluginMapping.get(policyId).add(pubName);
-        }
-    }
-
     private synchronized void removePublihsPolicies(Map<String, List<String>> newPolicyPublishPluginMapping, List<String> deletedPolicyIds, String pubName) {
         if (deletedPolicyIds == null || pubName == null) {
             return;
@@ -214,6 +203,17 @@ public class AlertPublisherImpl implements AlertPublisher {
         for (String policyId : deletedPolicyIds) {
             List<String> publishIds = newPolicyPublishPluginMapping.get(policyId);
             publishIds.remove(pubName);
+        }
+    }
+
+    private void addPublishmentPolicies(Map<String, List<String>> newPolicyPublishPluginMapping, List<String> addedPolicyIds, String pubName) {
+        if (addedPolicyIds == null || pubName == null) {
+            return;
+        }
+
+        for (String policyId : addedPolicyIds) {
+            newPolicyPublishPluginMapping.putIfAbsent(policyId, new ArrayList<>());
+            newPolicyPublishPluginMapping.get(policyId).add(pubName);
         }
     }
 

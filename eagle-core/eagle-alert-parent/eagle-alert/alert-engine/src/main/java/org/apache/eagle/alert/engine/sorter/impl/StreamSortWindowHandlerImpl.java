@@ -35,7 +35,7 @@ public class StreamSortWindowHandlerImpl implements StreamSortHandler, Serializa
     private static final Logger LOG = LoggerFactory.getLogger(StreamSortWindowHandlerImpl.class);
     private StreamWindowManager windowManager;
     private StreamSortSpec streamSortSpecSpec;
-    private PartitionedEventCollector outputCollector;
+    private transient PartitionedEventCollector outputCollector;
     private String streamId;
 
     public void prepare(String streamId, StreamSortSpec streamSortSpecSpec, PartitionedEventCollector outputCollector) {

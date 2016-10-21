@@ -87,13 +87,19 @@ public class AlertPublisherBoltFunction implements VoidFunction<Iterator<Tuple2<
             LOG.info("no publishments with PublishSpec {} for this topology", pubSpec);
             return;
         }
-
+        LOG.info("newPublishments{} ", newPublishments);
         Map<String, Publishment> newPublishmentsMap = new HashMap<>();
         newPublishments.forEach(p -> newPublishmentsMap.put(p.getName(), p));
         MapComparator<String, Publishment> comparator = new MapComparator<>(newPublishmentsMap, cachedPublishments);
         comparator.compare();
         List<Publishment> beforeModified = new ArrayList<>();
         comparator.getModified().forEach(p -> beforeModified.add(cachedPublishments.get(p.getName())));
+
+        LOG.info("cachedPublishments {}", cachedPublishments);
+        LOG.info("getAddedPublishments {}", comparator.getAdded());
+        LOG.info("getRemovedPublishments {}", comparator.getRemoved());
+        LOG.info("getModifiedPublishments {}", comparator.getModified());
+
         alertPublisher.onPublishChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), beforeModified);
         this.cachedPublishments = newPublishmentsMap;
     }

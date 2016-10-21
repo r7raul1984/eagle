@@ -18,6 +18,7 @@
 package org.apache.eagle.alert.engine.spark.model;
 
 import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
+import org.apache.eagle.alert.engine.evaluator.CompositePolicyHandler;
 import org.apache.eagle.alert.engine.evaluator.PolicyStreamHandler;
 import org.apache.eagle.alert.engine.spark.accumulator.MapAccum;
 import org.apache.spark.Accumulator;
@@ -40,21 +41,21 @@ public class PolicyState implements Serializable {
 
     private Accumulator<Map<String, Map<String, PolicyDefinition>>> policyDefinition;
 
-    private AtomicReference<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandlerRef = new AtomicReference<>();
+    private AtomicReference<Map<String, Map<String, CompositePolicyHandler>>> policyStreamHandlerRef = new AtomicReference<>();
 
-    private Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler;
+    private Accumulator<Map<String, Map<String, CompositePolicyHandler>>> policyStreamHandler;
 
     public PolicyState(JavaStreamingContext jssc) {
         Accumulator<Map<String, Map<String, PolicyDefinition>>> cachedPolicies = jssc.sparkContext().accumulator(new HashMap<>(), "policyAccum", new MapAccum());
         Accumulator<Map<String, Map<String, PolicyDefinition>>> policyDefinition = jssc.sparkContext().accumulator(new HashMap<>(), "policyDefinitionAccum", new MapAccum());
-        Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler = jssc.sparkContext().accumulator(new HashMap<>(), "policyStreamHandlerAccum", new MapAccum());
+        Accumulator<Map<String, Map<String, CompositePolicyHandler>>> policyStreamHandler = jssc.sparkContext().accumulator(new HashMap<>(), "policyStreamHandlerAccum", new MapAccum());
         this.cachedPolicies = cachedPolicies;
         this.policyDefinition = policyDefinition;
         this.policyStreamHandler = policyStreamHandler;
     }
 
     public PolicyState(Accumulator<Map<String, Map<String, PolicyDefinition>>> cachedPolicies, Accumulator<Map<String, Map<String, PolicyDefinition>>> policyDefinition,
-                       Accumulator<Map<String, Map<String, PolicyStreamHandler>>> policyStreamHandler) {
+                       Accumulator<Map<String, Map<String, CompositePolicyHandler>>> policyStreamHandler) {
         this.cachedPolicies = cachedPolicies;
         this.policyDefinition = policyDefinition;
         this.policyStreamHandler = policyStreamHandler;
@@ -64,21 +65,22 @@ public class PolicyState implements Serializable {
         cachedPoliciesRef.set(cachedPolicies.value());
         policyDefinitionRef.set(policyDefinition.value());
         policyStreamHandlerRef.set(policyStreamHandler.value());
-        LOG.info("---------routeSpecMapRef----------" + cachedPoliciesRef.get());
+        LOG.info("---------cachedPoliciesRef----------" + cachedPoliciesRef.get());
         LOG.info("---------policyDefinitionRef----------" + policyDefinitionRef.get());
         LOG.info("---------policyStreamHandlerRef----------" + policyStreamHandlerRef.get());
     }
 
-    public void store(String boltId, Map<String, PolicyDefinition> cachedPoliciesMap, Map<String, PolicyDefinition> newPolicyDefinition, Map<String, PolicyStreamHandler> newPolicyStreamHandler) {
+    public void store(String boltId, Map<String, PolicyDefinition> cachedPoliciesMap, Map<String, PolicyDefinition> newPolicyDefinition, Map<String, CompositePolicyHandler> newPolicyStreamHandler) {
         Map<String, Map<String, PolicyDefinition>> cachedPolicy = new HashMap<>();
         cachedPolicy.put(boltId, cachedPoliciesMap);
+        LOG.info("---------store---cachedPoliciesMap----------" + cachedPoliciesMap);
         cachedPolicies.add(cachedPolicy);
 
         Map<String, Map<String, PolicyDefinition>> policyDefinitionMap = new HashMap<>();
         policyDefinitionMap.put(boltId, newPolicyDefinition);
         policyDefinition.add(policyDefinitionMap);
 
-        Map<String, Map<String, PolicyStreamHandler>> policyStreamHandlerMap = new HashMap<>();
+        Map<String, Map<String, CompositePolicyHandler>> policyStreamHandlerMap = new HashMap<>();
         policyStreamHandlerMap.put(boltId, newPolicyStreamHandler);
         policyStreamHandler.add(policyStreamHandlerMap);
 
@@ -104,10 +106,10 @@ public class PolicyState implements Serializable {
         return boltIdToPolicyMap;
     }
 
-    public Map<String, PolicyStreamHandler> getPolicyStreamHandlerByBoltId(String boltId) {
-        Map<String, Map<String, PolicyStreamHandler>> boltIdToPolicyStreamHandler = policyStreamHandlerRef.get();
+    public Map<String, CompositePolicyHandler> getPolicyStreamHandlerByBoltId(String boltId) {
+        Map<String, Map<String, CompositePolicyHandler>> boltIdToPolicyStreamHandler = policyStreamHandlerRef.get();
         LOG.info("---PolicyState----getPolicyStreamHandlerByBoltId----------" + (boltIdToPolicyStreamHandler));
-        Map<String, PolicyStreamHandler> boltIdToPolicyStreamHandlerMap = boltIdToPolicyStreamHandler.get(boltId);
+        Map<String, CompositePolicyHandler> boltIdToPolicyStreamHandlerMap = boltIdToPolicyStreamHandler.get(boltId);
         if (boltIdToPolicyStreamHandlerMap == null) {
             boltIdToPolicyStreamHandlerMap = new HashMap<>();
         }

@@ -78,7 +78,7 @@ public class RouteState implements Serializable {
 
     public Map<StreamPartition, StreamRouterSpec> getRouteSpecMapByPartition(int partitionNum) {
         Map<Integer, Map<StreamPartition, StreamRouterSpec>> partitionTorouteSpecMap = routeSpecMapRef.get();
-        LOG.info("---RouteState----partitionTorouteSpecMap----------" + (partitionTorouteSpecMap));
+        LOG.info("---RouteState----getRouteSpecMapByPartition----------" + (partitionTorouteSpecMap));
         Map<StreamPartition, StreamRouterSpec> routeSpec = partitionTorouteSpecMap.get(partitionNum);
         if (routeSpec == null) {
             routeSpec = new HashMap<>();
@@ -89,7 +89,7 @@ public class RouteState implements Serializable {
     public Map<StreamPartition, List<StreamRoutePartitioner>> getRoutePartitionerByPartition(int partitionNum) {
 
         Map<Integer, Map<StreamPartition, List<StreamRoutePartitioner>>> partitionToroutePartitioner = routePartitionerMapRef.get();
-        LOG.info("---RouteState----partitionToroutePartitioner----------" + (partitionToroutePartitioner));
+        LOG.info("---RouteState----getRoutePartitionerByPartition----------" + (partitionToroutePartitioner));
         Map<StreamPartition, List<StreamRoutePartitioner>> routePartitioner = partitionToroutePartitioner.get(partitionNum);
         if (routePartitioner == null) {
             routePartitioner = new HashMap<>();

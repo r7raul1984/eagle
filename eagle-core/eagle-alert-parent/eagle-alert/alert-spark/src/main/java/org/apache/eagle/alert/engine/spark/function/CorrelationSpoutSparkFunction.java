@@ -60,7 +60,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         try {
             value = mapper.readValue(message._2, typeRef);
         } catch (IOException e) {
-            LOG.error("covert tuple value to map error");
+            LOG.info("covert tuple value to map error");
             return Collections.emptyIterator();
         }
         List<Object> tuple = new ArrayList<>(2);
@@ -70,7 +70,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         SpoutSpec spoutSpec = spoutSpecRef.get();
         Tuple2StreamMetadata metadata = spoutSpec.getTuple2StreamMetadataMap().get(topic);
         if (metadata == null) {
-            LOG.error(
+            LOG.info(
                     "tuple2StreamMetadata is null spout collector for topic {} see monitored metadata invalid, is this data source removed! ", topic);
             return Collections.emptyIterator();
         }
@@ -79,7 +79,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
 
         List<StreamRepartitionMetadata> streamRepartitionMetadataList = spoutSpec.getStreamRepartitionMetadataMap().get(topic);
         if (streamRepartitionMetadataList == null) {
-            LOG.error(
+            LOG.info(
                     "streamRepartitionMetadataList is nullspout collector for topic {} see monitored metadata invalid, is this data source removed! ", topic);
             return Collections.emptyIterator();
         }
@@ -88,7 +88,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         Map<String, StreamDefinition> sds = sdsRef.get();
         StreamDefinition sd = sds.get(streamId);
         if (sd == null) {
-            LOG.warn("StreamDefinition {} is not found within {}, ignore this message", streamId, sds);
+            LOG.info("StreamDefinition {} is not found within {}, ignore this message", streamId, sds);
             return Collections.emptyIterator();
         }
         List<Tuple2<Integer, PartitionedEvent>> outputTuple2s = new ArrayList<>(5);
@@ -116,6 +116,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
         if (CollectionUtils.isEmpty(outputTuple2s)) {
             return Collections.emptyIterator();
         }
+       // LOG.info("CorrelationSpoutSparkFunction {} ", outputTuple2s);
         return outputTuple2s.iterator();
     }
 
@@ -137,7 +138,7 @@ public class CorrelationSpoutSparkFunction implements PairFlatMapFunction<Tuple2
 
     @SuppressWarnings({"rawtypes", "unchecked"})
     private StreamEvent convertToStreamEventByStreamDefinition(long timestamp, Map messageContent, StreamDefinition sd) {
-        return null;//StreamEvent.Builder().timestamep(timestamp).attributes(messageContent, sd).build();
+        return StreamEvent.builder().timestamep(timestamp).attributes(messageContent, sd).build();
     }
 
 }

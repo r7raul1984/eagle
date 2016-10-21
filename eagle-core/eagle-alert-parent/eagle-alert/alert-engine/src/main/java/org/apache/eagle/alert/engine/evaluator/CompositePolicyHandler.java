@@ -23,6 +23,7 @@ import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ import java.util.Map;
 /**
  * Created on 7/27/16.
  */
-public class CompositePolicyHandler implements PolicyStreamHandler {
+public class CompositePolicyHandler implements PolicyStreamHandler, Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(CompositePolicyHandler.class);
 
     private PolicyStreamHandler policyHandler;
@@ -64,6 +65,10 @@ public class CompositePolicyHandler implements PolicyStreamHandler {
     public void send(StreamEvent event) throws Exception {
         // policyHandler.send(event);
         send(event, 0);
+    }
+
+    public void clearHandlers() {
+        this.handlers = new ArrayList<>();
     }
 
     // send event to index of stream handler

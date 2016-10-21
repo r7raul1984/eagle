@@ -25,11 +25,13 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 public class StreamSortedWindowOnHeap extends BaseStreamWindow {
     private static final Logger LOG = LoggerFactory.getLogger(StreamSortedWindowOnHeap.class);
     private final TreeMultiset<PartitionedEvent> treeMultisetCache;
+
 
     /**
      * @param start  start time.

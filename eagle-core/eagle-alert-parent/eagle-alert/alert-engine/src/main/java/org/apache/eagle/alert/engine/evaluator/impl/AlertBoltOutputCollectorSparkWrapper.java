@@ -22,11 +22,12 @@ import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 
 import scala.Tuple2;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-public class AlertBoltOutputCollectorSparkWrapper implements AlertStreamCollector {
+public class AlertBoltOutputCollectorSparkWrapper implements AlertStreamCollector , Serializable {
     private final LinkedList<Tuple2<String, AlertStreamEvent>> collector = new LinkedList<>();
 
     public AlertBoltOutputCollectorSparkWrapper() {

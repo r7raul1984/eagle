@@ -49,36 +49,39 @@ public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCol
     private Map<StreamPartition, List<StreamRoutePartitioner>> routePartitionerMap;
 
     public SparkStreamRouterBoltOutputCollector(Map<StreamPartition, StreamRouterSpec> routeSpecMap, Map<StreamPartition, List<StreamRoutePartitioner>> routePartitionerMap) {
-        this.outputCollector = new LinkedList<>();
+        this.outputCollector = new ArrayList<>();
         this.routeSpecMap = routeSpecMap;
         this.routePartitionerMap = routePartitionerMap;
     }
 
     public List<Tuple2<Integer, PartitionedEvent>> emitResult() {
         if (outputCollector.isEmpty()) {
+            LOG.info("Emit Empty");
             return Collections.emptyList();
         }
-        List<Tuple2<Integer, PartitionedEvent>> result = new LinkedList<>();
+      /*  List<Tuple2<Integer, PartitionedEvent>> result = new LinkedList<>();
         result.addAll(outputCollector);
-        outputCollector.clear();
-        return result;
+        outputCollector.clear();*/
+        LOG.info("Emit result {}", outputCollector);
+        return outputCollector;
     }
 
     public void emit(PartitionedEvent event) {
+        LOG.info("Emit {} getPartition {}", event, event.getPartition());
         try {
             StreamPartition partition = event.getPartition();
             StreamRouterSpec routerSpec = routeSpecMap.get(partition);
             if (routerSpec == null) {
-                if (LOG.isDebugEnabled()) {
+               // if (LOG.isDebugEnabled()) {
                     // Don't know how to route stream, if it's correct, it's better to filter useless stream in spout side
-                    LOG.debug("Drop event {} as StreamPartition {} is not pointed to any router metadata {}", event, event.getPartition(), routeSpecMap);
-                }
+                    LOG.info("Drop event {} as StreamPartition {} is not pointed to any router metadata {}", event, event.getPartition(), routeSpecMap);
+                //}
                 this.drop(event);
                 return;
             }
 
             if (routePartitionerMap.get(routerSpec.getPartition()) == null) {
-                LOG.error("Partitioner for " + routerSpec + " is null");
+                LOG.info("Partitioner for " + routerSpec + " is null");
                 return;
             }
 
@@ -95,18 +98,18 @@ public class SparkStreamRouterBoltOutputCollector implements PartitionedEventCol
                     int partitionIndex = getPartitionIndex(streamRoute);
                     try {
                         PartitionedEvent emittedEvent = new PartitionedEvent(newEvent, routerSpec.getPartition(), streamRoute.getPartitionKey());
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Emitted to partition {} with message {}", partitionIndex, emittedEvent);
-                        }
+                       // if (LOG.isDebugEnabled()) {
+                            LOG.info("Emitted to partition {} with message {}", partitionIndex, emittedEvent);
+                      //  }
                         outputCollector.add(new Tuple2<>(partitionIndex, event));
                     } catch (RuntimeException ex) {
-                        LOG.error("Failed to emit to partition {} with {}", partitionIndex, newEvent, ex);
+                        LOG.info("Failed to emit to partition {} with {}", partitionIndex, newEvent, ex);
                         throw ex;
                     }
                 }
             }
         } catch (Exception ex) {
-            LOG.error(ex.getMessage(), ex);
+            LOG.info(ex.getMessage(), ex);
         }
     }
 

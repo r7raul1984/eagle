@@ -121,7 +121,8 @@ public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tup
 
     public void cleanup(StreamRouter router) {
         if (router != null) {
-            router.close();
+            StreamRouterImpl routerImpl = (StreamRouterImpl)router;
+            routerImpl.closeClock();
         }
     }
 
@@ -153,11 +154,11 @@ public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tup
                 modified.put(s, newSSS.get(s));
             }
         });
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("added StreamSortSpec " + added);
-            LOG.debug("removed StreamSortSpec " + removed);
-            LOG.debug("modified StreamSortSpec " + modified);
-        }
+        //  if (LOG.isDebugEnabled()) {
+        LOG.info("added StreamSortSpec " + added);
+        LOG.info("removed StreamSortSpec " + removed);
+        LOG.info("modified StreamSortSpec " + modified);
+        // }
         router.onStreamSortSpecChange(added, removed, modified);
         // switch cache
         this.cachedSSS = newSSS;
@@ -184,11 +185,11 @@ public class StreamRouteBoltFunction implements PairFlatMapFunction<Iterator<Tup
             }
         });
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("added StreamRouterSpec " + addedRouterSpecs);
-            LOG.debug("removed StreamRouterSpec " + removedRouterSpecs);
-            LOG.debug("modified StreamRouterSpec " + modifiedRouterSpecs);
-        }
+        //  if (LOG.isDebugEnabled()) {
+        LOG.info("added StreamRouterSpec " + addedRouterSpecs);
+        LOG.info("removed StreamRouterSpec " + removedRouterSpecs);
+        LOG.info("modified StreamRouterSpec " + modifiedRouterSpecs);
+        //  }
 
         routeCollector.onStreamRouterSpecChange(addedRouterSpecs, removedRouterSpecs, modifiedRouterSpecs, sds);
         // switch cache

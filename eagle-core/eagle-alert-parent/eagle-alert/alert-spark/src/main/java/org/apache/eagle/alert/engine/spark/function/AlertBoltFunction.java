@@ -22,6 +22,7 @@ import org.apache.eagle.alert.coordination.model.AlertBoltSpec;
 import org.apache.eagle.alert.engine.StreamContextImpl;
 import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.engine.evaluator.CompositePolicyHandler;
 import org.apache.eagle.alert.engine.evaluator.PolicyGroupEvaluator;
 import org.apache.eagle.alert.engine.evaluator.PolicyStreamHandler;
 import org.apache.eagle.alert.engine.evaluator.impl.AlertBoltOutputCollectorSparkWrapper;
@@ -73,8 +74,8 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
                 alertOutputCollector = new AlertBoltOutputCollectorSparkWrapper();
                 //TODO StreamContext need to be more abstract
                 Map<String, PolicyDefinition> policyDefinitionMap = policyState.getPolicyDefinitionByBoltId(boltId);
-                Map<String, PolicyStreamHandler> policyStreamHandlerMap = policyState.getPolicyStreamHandlerByBoltId(boltId);
-                // policyGroupEvaluator.init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector, policyDefinitionMap, policyStreamHandlerMap);
+                Map<String, CompositePolicyHandler> policyStreamHandlerMap = policyState.getPolicyStreamHandlerByBoltId(boltId);
+                policyGroupEvaluator.init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector, policyDefinitionMap, policyStreamHandlerMap);
                 onAlertBoltSpecChange(boltId, spec, sds, policyGroupEvaluator, policyState);
             }
             PartitionedEvent event = tuple2._2;
@@ -90,6 +91,7 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
 
     private void onAlertBoltSpecChange(String boltId, AlertBoltSpec spec, Map<String, StreamDefinition> sds, PolicyGroupEvaluatorImpl policyGroupEvaluator, PolicyState policyState) {
         List<PolicyDefinition> newPolicies = spec.getBoltPoliciesMap().get(boltId);
+        LOG.info("newPolicies {}", newPolicies);
         if (newPolicies == null) {
             LOG.info("no new policy with AlertBoltSpec {} for this bolt {}", spec, boltId);
             return;
@@ -97,11 +99,16 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
 
         Map<String, PolicyDefinition> newPoliciesMap = new HashMap<>();
         newPolicies.forEach(p -> newPoliciesMap.put(p.getName(), p));
+        LOG.info("newPoliciesMap {}", newPoliciesMap);
         MapComparator<String, PolicyDefinition> comparator = new MapComparator<>(newPoliciesMap, policyState.getCachedPolicyByBoltId(boltId));
         comparator.compare();
+        LOG.info("cachedPolicies {}", policyState.getCachedPolicyByBoltId(boltId));
+        LOG.info("getAdded {}", comparator.getAdded());
+        LOG.info("getRemoved {}", comparator.getRemoved());
+        LOG.info("getModified {}", comparator.getModified());
         policyGroupEvaluator.onPolicyChange(comparator.getAdded(), comparator.getRemoved(), comparator.getModified(), sds);
 
-        // policyState.store(boltId, newPoliciesMap, policyGroupEvaluator.getPolicyDefinitionMap(), policyGroupEvaluator.getPolicyStreamHandlerMap());
+        policyState.store(boltId, newPoliciesMap, policyGroupEvaluator.getPolicyDefinitionMap(), policyGroupEvaluator.getPolicyStreamHandlerMap());
     }
 
     public void cleanup(PolicyGroupEvaluator policyGroupEvaluator, AlertBoltOutputCollectorSparkWrapper alertOutputCollector) {

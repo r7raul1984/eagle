@@ -61,19 +61,20 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
         this.policyStreamHandlerMap = policyStreamHandlerMap;
         this.policyDefinitionMap = policyDefinitionMap;
         this.context = context;
-        this.policyStreamHandlerMap.forEach((k, v) -> {
+        this.policyStreamHandlerMap.forEach((policyName, compositePolicyHandler) -> {
             PolicyHandlerContext policyHandlerContext = new PolicyHandlerContext();
             policyHandlerContext.setPolicyCounter(this.context.counter());
-            PolicyDefinition policyDefinition = policyDefinitionMap.get(k);
+            PolicyDefinition policyDefinition = policyDefinitionMap.get(policyName);
             policyHandlerContext.setPolicyDefinition(policyDefinition);
             policyHandlerContext.setPolicyEvaluator(this);
             policyHandlerContext.setPolicyEvaluatorId(policyEvaluatorId);
             try {
-                v.prepare(this.collector, policyHandlerContext);
+                compositePolicyHandler.clearHandlers();
+                compositePolicyHandler.prepare(this.collector, policyHandlerContext);
             } catch (Exception e) {
                 LOG.error("Initialized policy handler for policy error: {}", policyDefinition);
             }
-            LOG.info("Initialized policy handler for policy : {}", policyDefinition);
+            LOG.info("Initialized policy handler for policy end : {}", policyDefinition);
         });
         Thread.currentThread().setName(policyEvaluatorId);
     }

@@ -35,7 +35,6 @@ public class AlertBoltSpec implements Serializable {
     private String topologyName;
 
     // mapping from boltId to list of PolicyDefinitions
-    @JsonIgnore
     private Map<String, List<PolicyDefinition>> boltPoliciesMap = new HashMap<String, List<PolicyDefinition>>();
 
     // mapping from boltId to list of PolicyDefinition's Ids
@@ -88,12 +87,10 @@ public class AlertBoltSpec implements Serializable {
         }
     }
 
-    @JsonIgnore
     public Map<String, List<PolicyDefinition>> getBoltPoliciesMap() {
         return boltPoliciesMap;
     }
 
-    @JsonIgnore
     public void setBoltPoliciesMap(Map<String, List<PolicyDefinition>> boltPoliciesMap) {
         this.boltPoliciesMap = boltPoliciesMap;
     }

@@ -145,9 +145,9 @@ public final class StreamTimeClockManagerImpl implements StreamTimeClockManager 
                 count++;
             }
         }
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Triggered {} time-clock listeners on stream {}", count, streamId);
-        }
+       // if (LOG.isDebugEnabled()) {
+            LOG.info("Triggered {} time-clock listeners on stream {}", count, streamId);
+        //}
     }
 
     private static long getCurrentSystemTime() {
