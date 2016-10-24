@@ -16,6 +16,7 @@
  */
 package org.apache.eagle.app.sink;
 
+import backtype.storm.task.OutputCollector;
 import backtype.storm.task.TopologyContext;
 import backtype.storm.topology.BasicOutputCollector;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,24 +44,29 @@ public class KafkaStreamSink extends StormStreamSink<KafkaStreamSinkConfig> {
     }
 
     @Override
-    public void prepare(Map stormConf, TopologyContext context) {
-        super.prepare(stormConf, context);
+    public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
+        super.prepare(stormConf, context, collector);
         Properties properties = new Properties();
         properties.put("metadata.broker.list", config.getBrokerList());
         properties.put("serializer.class", config.getSerializerClass());
         properties.put("key.serializer.class", config.getKeySerializerClass());
+        // new added properties for async producer
+        properties.put("producer.type", config.getProducerType());
+        properties.put("batch.num.messages", config.getNumBatchMessages());
+        properties.put("request.required.acks", config.getRequestRequiredAcks());
+        properties.put("queue.buffering.max.ms", config.getMaxQueueBufferMs());
         ProducerConfig producerConfig = new ProducerConfig(properties);
         producer = new Producer(producerConfig);
     }
 
     @Override
-    protected void execute(Object key, Map event, BasicOutputCollector collector) {
+    protected void execute(Object key, Map event, OutputCollector collector) throws Exception {
         try {
             String output = new ObjectMapper().writeValueAsString(event);
             producer.send(new KeyedMessage(this.topicId, key, output));
         } catch (Exception ex) {
             LOG.error(ex.getMessage(), ex);
-            collector.reportError(ex);
+            throw ex;
         }
     }
 
@@ -97,6 +103,11 @@ public class KafkaStreamSink extends StormStreamSink<KafkaStreamSinkConfig> {
             desc.setBrokerList(config.getString("dataSinkConfig.brokerList"));
             desc.setSerializerClass(config.getString("dataSinkConfig.serializerClass"));
             desc.setKeySerializerClass(config.getString("dataSinkConfig.keySerializerClass"));
+            // new added properties for async producer
+            desc.setNumBatchMessages(config.getString("dataSinkConfig.numBatchMessages"));
+            desc.setProducerType(config.getString("dataSinkConfig.producerType"));
+            desc.setMaxQueueBufferMs(config.getString("dataSinkConfig.maxQueueBufferMs"));
+            desc.setRequestRequiredAcks(config.getString("dataSinkConfig.requestRequiredAcks"));
             return desc;
         }
 
