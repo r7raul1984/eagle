@@ -18,6 +18,7 @@ package org.apache.eagle.alert.engine.evaluator;
 
 import org.apache.eagle.alert.engine.Collector;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
+import org.apache.eagle.alert.engine.evaluator.impl.SiddhiPolicyHandler;
 import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.model.StreamEvent;
 import org.slf4j.Logger;
@@ -67,10 +68,6 @@ public class CompositePolicyHandler implements PolicyStreamHandler, Serializable
         send(event, 0);
     }
 
-    public void clearHandlers() {
-        this.handlers = new ArrayList<>();
-    }
-
     // send event to index of stream handler
     public void send(StreamEvent event, int idx) throws Exception {
         if (handlers.size() > idx) {
@@ -98,4 +95,17 @@ public class CompositePolicyHandler implements PolicyStreamHandler, Serializable
         }
     }
 
+    public void clearHandlers() {
+        this.handlers = new ArrayList<>();
+    }
+
+    public void restoreSiddhiSnapshot(byte[] siddhiSnapshot) {
+        SiddhiPolicyHandler siddhiPolicyHandler = (SiddhiPolicyHandler) policyHandler;
+        siddhiPolicyHandler.restoreSiddhiSnapshot(siddhiSnapshot);
+    }
+
+    public byte[] closeAndSnapShot() {
+        SiddhiPolicyHandler siddhiPolicyHandler = (SiddhiPolicyHandler) policyHandler;
+        return siddhiPolicyHandler.closeAndSnapShot();
+    }
 }

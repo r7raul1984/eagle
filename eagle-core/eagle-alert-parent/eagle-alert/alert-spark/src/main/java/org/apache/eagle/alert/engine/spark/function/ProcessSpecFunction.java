@@ -24,10 +24,7 @@ import org.apache.eagle.alert.coordination.model.PublishSpec;
 import org.apache.eagle.alert.coordination.model.RouterSpec;
 import org.apache.eagle.alert.coordination.model.SpoutSpec;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
-import org.apache.eagle.alert.engine.spark.model.PolicyState;
-import org.apache.eagle.alert.engine.spark.model.PublishState;
-import org.apache.eagle.alert.engine.spark.model.RouteState;
-import org.apache.eagle.alert.engine.spark.model.WindowState;
+import org.apache.eagle.alert.engine.spark.model.*;
 import org.apache.eagle.alert.service.SpecMetadataServiceClientImpl;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.Function;
@@ -61,12 +58,13 @@ public class ProcessSpecFunction implements Function<JavaRDD<MessageAndMetadata<
     private WindowState winstate;
     private PolicyState policyState;
     private PublishState publishState;
+    private SiddhiState siddhiState;
 
     public ProcessSpecFunction(AtomicReference<OffsetRange[]> offsetRanges, AtomicReference<SpoutSpec> spoutSpecRef,
                                AtomicReference<Map<String, StreamDefinition>> sdsRef, AtomicReference<AlertBoltSpec> alertBoltSpecRef,
                                AtomicReference<HashSet<String>> topicsRef, AtomicReference<RouterSpec> routerSpecRef,
-                               Config config, WindowState windowState, RouteState routeState,
-                               PolicyState policyState, PublishState publishState, AtomicReference<PublishSpec> publishSpecRef
+                               Config config, WindowState windowState, RouteState routeState, PolicyState policyState,
+                               PublishState publishState, SiddhiState siddhiState, AtomicReference<PublishSpec> publishSpecRef
     ) {
         this.offsetRanges = offsetRanges;
         this.spoutSpecRef = spoutSpecRef;
@@ -80,6 +78,7 @@ public class ProcessSpecFunction implements Function<JavaRDD<MessageAndMetadata<
         this.routeState = routeState;
         this.policyState = policyState;
         this.publishState = publishState;
+        this.siddhiState = siddhiState;
     }
 
     @Override
@@ -99,8 +98,6 @@ public class ProcessSpecFunction implements Function<JavaRDD<MessageAndMetadata<
                     );
                 }
         );
-        LOG.info("alertBoltSpecRef={}", alertBoltSpecRef.get().getBoltPoliciesMap());
-        LOG.info("alertBoltSpecRef={}", alertBoltSpecRef.get().getBoltPoliciesMap().get("policy4"));
         sdsRef.set(client.getSds());
         publishSpecRef.set(client.getPublishSpec());
         routerSpecRef.set(client.getRouterSpec());
@@ -117,6 +114,7 @@ public class ProcessSpecFunction implements Function<JavaRDD<MessageAndMetadata<
         routeState.recover();
         policyState.recover();
         publishState.recover();
+        siddhiState.recover();
     }
 
     private void updateOffsetRanges(JavaRDD<MessageAndMetadata<String, String>> rdd) {

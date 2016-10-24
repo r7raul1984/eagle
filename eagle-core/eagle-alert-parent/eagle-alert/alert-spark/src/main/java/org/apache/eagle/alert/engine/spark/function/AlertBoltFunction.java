@@ -31,6 +31,7 @@ import org.apache.eagle.alert.engine.model.AlertStreamEvent;
 import org.apache.eagle.alert.engine.model.PartitionedEvent;
 import org.apache.eagle.alert.engine.runner.MapComparator;
 import org.apache.eagle.alert.engine.spark.model.PolicyState;
+import org.apache.eagle.alert.engine.spark.model.SiddhiState;
 import org.apache.eagle.alert.engine.utils.Constants;
 import org.apache.spark.api.java.function.PairFlatMapFunction;
 import org.slf4j.Logger;
@@ -46,11 +47,13 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
     private AtomicReference<Map<String, StreamDefinition>> sdsRef;
     private AtomicReference<AlertBoltSpec> alertBoltSpecRef;
     private PolicyState policyState;
+    private SiddhiState siddhiState;
 
-    public AlertBoltFunction(AtomicReference<Map<String, StreamDefinition>> sdsRef, AtomicReference<AlertBoltSpec> alertBoltSpecRef, PolicyState policyState) {
+    public AlertBoltFunction(AtomicReference<Map<String, StreamDefinition>> sdsRef, AtomicReference<AlertBoltSpec> alertBoltSpecRef, PolicyState policyState, SiddhiState siddhiState) {
         this.sdsRef = sdsRef;
         this.alertBoltSpecRef = alertBoltSpecRef;
         this.policyState = policyState;
+        this.siddhiState = siddhiState;
     }
 
     @Override
@@ -61,6 +64,7 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
         AlertBoltSpec spec;
         Map<String, StreamDefinition> sds;
         int partitionNum = Constants.UNKNOW_PARTITION;
+        String boltId = Constants.ALERTBOLTNAME_PREFIX + partitionNum;
         while (tuple2Iterator.hasNext()) {
             Tuple2<Integer, PartitionedEvent> tuple2 = tuple2Iterator.next();
             if (partitionNum == Constants.UNKNOW_PARTITION) {
@@ -69,20 +73,21 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
             if (policyGroupEvaluator == null) {
                 spec = alertBoltSpecRef.get();
                 sds = sdsRef.get();
-                String boltId = Constants.ALERTBOLTNAME_PREFIX + partitionNum;
+                boltId = Constants.ALERTBOLTNAME_PREFIX + partitionNum;
                 policyGroupEvaluator = new PolicyGroupEvaluatorImpl(boltId + "-evaluator_stage1");
                 alertOutputCollector = new AlertBoltOutputCollectorSparkWrapper();
                 //TODO StreamContext need to be more abstract
                 Map<String, PolicyDefinition> policyDefinitionMap = policyState.getPolicyDefinitionByBoltId(boltId);
                 Map<String, CompositePolicyHandler> policyStreamHandlerMap = policyState.getPolicyStreamHandlerByBoltId(boltId);
-                policyGroupEvaluator.init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector, policyDefinitionMap, policyStreamHandlerMap);
+                byte[] siddhiSnapShot = siddhiState.getSiddhiSnapShotByBoltIdAndPartitionNum(boltId, partitionNum);
+                policyGroupEvaluator.init(new StreamContextImpl(null, new MultiCountMetric(), null), alertOutputCollector, policyDefinitionMap, policyStreamHandlerMap, siddhiSnapShot);
                 onAlertBoltSpecChange(boltId, spec, sds, policyGroupEvaluator, policyState);
             }
             PartitionedEvent event = tuple2._2;
             policyGroupEvaluator.nextEvent(event);
         }
 
-        cleanup(policyGroupEvaluator, alertOutputCollector);
+        cleanup(policyGroupEvaluator, alertOutputCollector, boltId, partitionNum);
         if (alertOutputCollector == null) {
             return Collections.emptyIterator();
         }
@@ -111,9 +116,9 @@ public class AlertBoltFunction implements PairFlatMapFunction<Iterator<Tuple2<In
         policyState.store(boltId, newPoliciesMap, policyGroupEvaluator.getPolicyDefinitionMap(), policyGroupEvaluator.getPolicyStreamHandlerMap());
     }
 
-    public void cleanup(PolicyGroupEvaluator policyGroupEvaluator, AlertBoltOutputCollectorSparkWrapper alertOutputCollector) {
+    public void cleanup(PolicyGroupEvaluatorImpl policyGroupEvaluator, AlertBoltOutputCollectorSparkWrapper alertOutputCollector, String boltId, int partitionNum) {
         if (policyGroupEvaluator != null) {
-            policyGroupEvaluator.close();
+            siddhiState.store(policyGroupEvaluator.closeAndSnapShot(), boltId, partitionNum);
         }
         if (alertOutputCollector != null) {
             alertOutputCollector.flush();

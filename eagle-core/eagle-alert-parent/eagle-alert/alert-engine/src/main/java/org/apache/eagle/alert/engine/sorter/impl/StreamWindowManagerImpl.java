@@ -47,7 +47,7 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
     private final Period windowPeriod;
     private final long windowMargin;
     @SuppressWarnings("unused")
-    private final transient Comparator<PartitionedEvent> comparator;
+    private final Comparator<PartitionedEvent> comparator;
     private long rejectTime;
 
     public StreamWindowManagerImpl(Period windowPeriod, long windowMargin, Comparator<PartitionedEvent> comparator, PartitionedEventCollector collector) {
@@ -184,6 +184,7 @@ public class StreamWindowManagerImpl implements StreamWindowManager, Serializabl
 
     public void updateOutputCollector(PartitionedEventCollector outputCollector) {
         this.collector = outputCollector;
+       // this.comparator = PartitionedEventTimeOrderingComparator.INSTANCE;
         if (windowBuckets != null && !windowBuckets.isEmpty()) {
             windowBuckets.forEach((windowStartTime, streamWindow) -> streamWindow.register(outputCollector));
         }

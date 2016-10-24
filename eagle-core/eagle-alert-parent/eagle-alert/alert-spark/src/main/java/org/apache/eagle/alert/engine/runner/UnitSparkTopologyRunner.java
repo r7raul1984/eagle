@@ -23,10 +23,7 @@ import static org.apache.eagle.alert.engine.utils.SpecUtils.getTopicsByConfig;
 import org.apache.eagle.alert.coordination.model.*;
 import org.apache.eagle.alert.engine.coordinator.*;
 import org.apache.eagle.alert.engine.spark.function.*;
-import org.apache.eagle.alert.engine.spark.model.PolicyState;
-import org.apache.eagle.alert.engine.spark.model.PublishState;
-import org.apache.eagle.alert.engine.spark.model.RouteState;
-import org.apache.eagle.alert.engine.spark.model.WindowState;
+import org.apache.eagle.alert.engine.spark.model.*;
 
 import kafka.common.TopicAndPartition;
 import com.typesafe.config.Config;
@@ -145,6 +142,7 @@ public class UnitSparkTopologyRunner implements Serializable {
         RouteState routeState = new RouteState(jssc);
         PolicyState policyState = new PolicyState(jssc);
         PublishState publishState = new PublishState(jssc);
+        SiddhiState siddhiState = new SiddhiState(jssc);
 
         JavaPairDStream<String, String> pairDStream = messages
                 .transform(new ProcessSpecFunction(offsetRanges,
@@ -158,6 +156,7 @@ public class UnitSparkTopologyRunner implements Serializable {
                         routeState,
                         policyState,
                         publishState,
+                        siddhiState,
                         publishSpecRef))
                 .mapToPair(km -> new Tuple2<>(km.topic(), km.message()));
 
@@ -167,7 +166,7 @@ public class UnitSparkTopologyRunner implements Serializable {
                 .transformToPair(new ChangePartitionTo(numOfRouter))
                 .mapPartitionsToPair(new StreamRouteBoltFunction("streamBolt", sdsRef, routerSpecRef, winstate, routeState))
                 .transformToPair(new ChangePartitionTo(numOfAlertBolts))
-                .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState))
+                .mapPartitionsToPair(new AlertBoltFunction(sdsRef, alertBoltSpecRef, policyState, siddhiState))
                 .repartition(numOfPublishTasks)
                 .foreachRDD(new Publisher(alertPublishBoltName, kafkaCluster, groupId, offsetRanges, publishState, publishSpecRef));
     }

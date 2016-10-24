@@ -25,7 +25,7 @@ import java.util.Objects;
 /**
  * TODO: Stable sorting algorithm for better performance to avoid event resorting with same timestamp?.
  */
-public class PartitionedEventTimeOrderingComparator implements Comparator<PartitionedEvent>,Serializable {
+public class PartitionedEventTimeOrderingComparator implements Comparator<PartitionedEvent>, Serializable {
     public static final PartitionedEventTimeOrderingComparator INSTANCE = new PartitionedEventTimeOrderingComparator();
 
     @Override

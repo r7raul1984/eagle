@@ -35,6 +35,7 @@ public class PolicyState implements Serializable {
     private static final Logger LOG = LoggerFactory.getLogger(PolicyState.class);
 
     private AtomicReference<Map<String, Map<String, PolicyDefinition>>> cachedPoliciesRef = new AtomicReference<>();
+
     private Accumulator<Map<String, Map<String, PolicyDefinition>>> cachedPolicies;
 
     private AtomicReference<Map<String, Map<String, PolicyDefinition>>> policyDefinitionRef = new AtomicReference<>();

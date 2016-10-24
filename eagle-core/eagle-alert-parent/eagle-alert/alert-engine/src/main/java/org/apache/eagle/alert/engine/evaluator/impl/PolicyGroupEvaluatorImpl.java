@@ -56,7 +56,8 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
         Thread.currentThread().setName(policyEvaluatorId);
     }
 
-    public void init(StreamContext context, AlertStreamCollector collector, Map<String, PolicyDefinition> policyDefinitionMap, Map<String, CompositePolicyHandler> policyStreamHandlerMap) {
+    public void init(StreamContext context, AlertStreamCollector collector, Map<String, PolicyDefinition> policyDefinitionMap,
+                     Map<String, CompositePolicyHandler> policyStreamHandlerMap, byte[] siddhiSnapshot) {
         this.collector = collector;
         this.policyStreamHandlerMap = policyStreamHandlerMap;
         this.policyDefinitionMap = policyDefinitionMap;
@@ -71,6 +72,9 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
             try {
                 compositePolicyHandler.clearHandlers();
                 compositePolicyHandler.prepare(this.collector, policyHandlerContext);
+                if (siddhiSnapshot != null) {
+                    compositePolicyHandler.restoreSiddhiSnapshot(siddhiSnapshot);
+                }
             } catch (Exception e) {
                 LOG.error("Initialized policy handler for policy error: {}", policyDefinition);
             }
@@ -97,6 +101,19 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
                 LOG.error("Failed to close handler {}", handler.toString(), e);
             }
         }
+    }
+
+    public byte[] closeAndSnapShot() {
+        byte[] snapshot = null;
+        for (PolicyStreamHandler handler : policyStreamHandlerMap.values()) {
+            try {
+                CompositePolicyHandler compositePolicyHandler = (CompositePolicyHandler) handler;
+                snapshot = compositePolicyHandler.closeAndSnapShot();
+            } catch (Exception e) {
+                LOG.error("Failed to closeAndSnapShot handler {}", handler.toString(), e);
+            }
+        }
+        return snapshot;
     }
 
     /**
@@ -128,8 +145,8 @@ public class PolicyGroupEvaluatorImpl implements PolicyGroupEvaluator {
 
     private static boolean isAcceptedByPolicy(PartitionedEvent event, PolicyDefinition policy) {
         return policy.getPartitionSpec().contains(event.getPartition())
-            && (policy.getInputStreams().contains(event.getEvent().getStreamId())
-            || policy.getDefinition().getInputStreams().contains(event.getEvent().getStreamId()));
+                && (policy.getInputStreams().contains(event.getEvent().getStreamId())
+                || policy.getDefinition().getInputStreams().contains(event.getEvent().getStreamId()));
     }
 
     @Override

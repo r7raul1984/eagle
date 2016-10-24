@@ -18,6 +18,7 @@ package org.apache.eagle.alert.engine.evaluator.impl;
 
 import java.io.Serializable;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.eagle.alert.engine.Collector;
 import org.apache.eagle.alert.engine.coordinator.PolicyDefinition;
 import org.apache.eagle.alert.engine.coordinator.StreamDefinition;
@@ -31,7 +32,9 @@ import org.slf4j.LoggerFactory;
 import org.wso2.siddhi.core.ExecutionPlanRuntime;
 import org.wso2.siddhi.core.SiddhiManager;
 import org.wso2.siddhi.core.stream.input.InputHandler;
+import org.wso2.siddhi.core.util.snapshot.ByteSerializer;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +54,7 @@ public class SiddhiPolicyHandler implements PolicyStreamHandler, Serializable {
     }
 
     protected String generateExecutionPlan(PolicyDefinition policyDefinition, Map<String, StreamDefinition> sds) throws StreamNotDefinedException {
-        return SiddhiDefinitionAdapter.buildSiddhiExecutionPlan(policyDefinition,sds);
+        return SiddhiDefinitionAdapter.buildSiddhiExecutionPlan(policyDefinition, sds);
     }
 
     @Override
@@ -67,15 +70,14 @@ public class SiddhiPolicyHandler implements PolicyStreamHandler, Serializable {
             LOG.error("Failed to create siddhi runtime for policy: {}, siddhi plan: \n\n{}\n", context.getPolicyDefinition().getName(), plan, parserException);
             throw parserException;
         }
-
         // add output stream callback
         List<String> outputStreams = getOutputStreams(policy);
         for (final String outputStream : outputStreams) {
             if (executionRuntime.getStreamDefinitionMap().containsKey(outputStream)) {
                 this.executionRuntime.addCallback(outputStream,
-                    new AlertStreamCallback(
-                        outputStream, SiddhiDefinitionAdapter.convertFromSiddiDefinition(executionRuntime.getStreamDefinitionMap().get(outputStream)),
-                        collector, context, currentIndex));
+                        new AlertStreamCallback(
+                                outputStream, SiddhiDefinitionAdapter.convertFromSiddiDefinition(executionRuntime.getStreamDefinitionMap().get(outputStream)),
+                                collector, context, currentIndex));
             } else {
                 throw new IllegalStateException("Undefined output stream " + outputStream);
             }
@@ -96,14 +98,39 @@ public class SiddhiPolicyHandler implements PolicyStreamHandler, Serializable {
         if (inputHandler != null) {
             context.getPolicyCounter().scope(String.format("%s.%s", this.context.getPolicyDefinition().getName(), "eval_count")).incr();
             inputHandler.send(event.getTimestamp(), event.getData());
-
             //if (LOG.isDebugEnabled()) {
-                LOG.info("sent event to siddhi stream {} {}", streamId,event.getData());
+            LOG.info("sent event to siddhi stream {} {}", streamId, event.getData());
             //}
         } else {
             context.getPolicyCounter().scope(String.format("%s.%s", this.context.getPolicyDefinition().getName(), "drop_count")).incr();
             LOG.warn("No input handler found for stream {}", streamId);
         }
+    }
+
+    public void restoreSiddhiSnapshot(byte[] siddhiSnapshot) {
+        HashMap<String, Object[]> snapshots = (HashMap<String, Object[]>) ByteSerializer.BToO(siddhiSnapshot);
+        HashMap<String, Object[]> modifiedSnapshots = new HashMap<>(snapshots.size());
+        snapshots.forEach((oldElementId, snapshot) -> {
+            String[] splitedId = StringUtils.split(oldElementId, "-");
+            String newElementId = executionRuntime.getName() + "-" + splitedId[splitedId.length - 1];
+            modifiedSnapshots.put(newElementId, snapshot);
+        });
+        siddhiSnapshot = ByteSerializer.OToB(modifiedSnapshots);
+        LOG.info("Restoring SiddhiSnapshot Start");
+        this.executionRuntime.restore(siddhiSnapshot);
+        LOG.info("Restoring SiddhiSnapshot End");
+    }
+
+    public byte[] closeAndSnapShot() {
+        byte[] snapshot = snapShot();
+        this.executionRuntime.shutdown();
+        this.siddhiManager.shutdown();
+        return snapshot;
+    }
+
+    public byte[] snapShot() {
+        byte[] snapshot = this.executionRuntime.snapshot();
+        return snapshot;
     }
 
     public void close() throws Exception {
@@ -121,5 +148,6 @@ public class SiddhiPolicyHandler implements PolicyStreamHandler, Serializable {
         sb.append(this.policy == null ? "" : this.policy.getName());
         return sb.toString();
     }
+
 
 }
