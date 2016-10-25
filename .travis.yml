@@ -13,13 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+env:
+  global:
+  - GH_REF: github.com/1haodian/incubator-eagle.git
+node_js:
+  - "4"
 script:
   - sudo rm /etc/mavenrc
   - export MAVEN_OPTS="-Xmx2469m -XX:MaxPermSize=512m"
   - nvm install 4
-  - mvn clean test --quiet
-node_js:
-  - "4"
+  - chmod ugo+x deploy.sh
+  - '[ "${TRAVIS_PULL_REQUEST}" != "false" ] || ./deploy.sh'
+  - mvn clean package -DskipTests=true --quiet 
 jdk:
   - oraclejdk8
 notifications:
@@ -32,6 +37,14 @@ notifications:
       - denglingang@yhd.com
     on_success: change
     on_failure: always
+deploy:
+  provider: releases
+  api_key: "${DLG_TOKEN}"
+  file: "eagle-server-assembly/target/eagle-0.5.0-incubating-SNAPSHOT-bin.tar.gz"
+  skip_cleanup: true
+  overwrite: true
+  on:
+    branch: master
 cache:
   directories:
      - $HOME/.m2
