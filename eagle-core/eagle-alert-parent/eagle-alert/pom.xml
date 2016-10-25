@@ -32,6 +32,7 @@
         <module>alert-assembly</module>
         <module>alert-devtools</module>
         <module>alert-service</module>
+        <module>alert-spark</module>
     </modules>
 
 	<properties>
