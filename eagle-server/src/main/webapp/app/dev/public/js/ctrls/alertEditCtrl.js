@@ -258,14 +258,15 @@
 		$scope.addPublisherType = "";
 		$scope.policyPublisherList = [];
 		$scope.publisher = {};
-
-		Entity.queryMetadata("policies/" + $scope.policy.name + "/publishments/")._then(function (res) {
-			$scope.policyPublisherList = $.map(res.data, function (publisher) {
-				return $.extend({
-					_exist: true
-				}, publisher);
-			});
-		});
+		if($scope.policy.name !== '') {
+            Entity.queryMetadata("policies/" + $scope.policy.name + "/publishments/")._then(function (res) {
+                $scope.policyPublisherList = $.map(res.data, function (publisher) {
+                    return $.extend({
+                        _exist: true
+                    }, publisher);
+                });
+            });
+		}
 
 		$scope.addPublisher = function () {
 			$scope.publisher = {
