@@ -16,7 +16,9 @@
  */
 package org.apache.eagle.alert.engine.coordinator;
 
-public class AlertDefinition {
+import java.io.Serializable;
+
+public class AlertDefinition implements Serializable {
     private TemplateType templateType = TemplateType.TEXT;
     private String subject;
     private String body;
