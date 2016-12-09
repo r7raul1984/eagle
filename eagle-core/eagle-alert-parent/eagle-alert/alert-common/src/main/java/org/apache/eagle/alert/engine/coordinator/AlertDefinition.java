@@ -19,6 +19,7 @@ package org.apache.eagle.alert.engine.coordinator;
 import java.io.Serializable;
 
 public class AlertDefinition implements Serializable {
+    private static final long serialVersionUID = -5913754026164532497L;
     private TemplateType templateType = TemplateType.TEXT;
     private String subject;
     private String body;

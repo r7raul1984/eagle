@@ -27,6 +27,7 @@ import java.util.Map;
  * @since Apr 5, 2016
  */
 public class Kafka2TupleMetadata  implements Serializable {
+    private static final long serialVersionUID = 5248377553126073015L;
     private String type;
     private String name; // data source name
     private Map<String, String> properties;
